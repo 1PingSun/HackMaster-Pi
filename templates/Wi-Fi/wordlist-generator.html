@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Password Wordlist Generator</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <meta name="theme-color" content="#0f0f17">
+    <style>
+        /* 補充樣式，僅針對字典生成器頁面 */
+        .form-group {
+            margin-bottom: 20px;
+            border-left: 3px solid #5a84ff;
+            padding-left: 15px;
+        }
+        
+        .info-section {
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #323259;
+        }
+        
+        .info-section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .info-values {
+            margin-left: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #5a84ff;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            background-color: #1e1e2f;
+            border: 1px solid #323259;
+            color: #c7d3e3;
+            font-family: 'VT323', monospace;
+            font-size: 28px;
+        }
+        
+        button {
+            background-color: #5a84ff;
+            color: #0f0f17;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-family: 'VT323', monospace;
+            font-size: 28px;
+            text-transform: uppercase;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #7a9cff;
+        }
+        
+        .delete-btn {
+            background-color: #ff3a4c;
+            padding: 5px 10px;
+            font-size: 24px;
+        }
+        
+        .delete-btn:hover {
+            background-color: #ff5a6c;
+        }
+        
+        .add-btn {
+            background-color: #00ffb3;
+            color: #0f0f17;
+        }
+        
+        .add-btn:hover {
+            background-color: #2affc1;
+        }
+        
+        .input-group {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .input-group input, .input-group select {
+            flex: 1;
+            margin-right: 10px;
+        }
+        
+        .input-group button {
+            width: auto;
+        }
+        
+        .terminal-output {
+            background-color: #1e1e2f;
+            padding: 15px;
+            border-left: 3px solid #5a84ff;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            min-height: 100px;
+            font-size: 28px;
+        }
+        
+        .blink {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-left: 3px solid #00ffb3;
+            font-size: 28px;
+        }
+        
+        .status.error {
+            border-left-color: #ff3a4c;
+        }
+        
+        .value-tag {
+            display: inline-block;
+            background-color: #1e1e2f;
+            color: #c7d3e3;
+            padding: 5px 10px;
+            margin: 5px;
+            border-radius: 3px;
+            border-left: 2px solid #00ffb3;
+            font-size: 28px;
+        }
+
+        .info-guide {
+            background-color: #1e1e2f;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 3px solid #00ffb3;
+            margin-bottom: 25px;
+        }
+
+        .info-guide p {
+            margin-bottom: 15px;
+            font-size: 28px;
+        }
+
+        .info-guide h3 {
+            color: #00ffb3;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .info-guide ul {
+            margin: 0;
+            padding-left: 25px;
+        }
+
+        .info-guide li {
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .info-guide ul ul li {
+            font-size: 26px;
+            margin-bottom: 5px;
+        }
+
+        .info-guide strong {
+            color: #5a84ff;
+        }
+
+        .info-guide em {
+            color: #aab1c0;
+            font-style: italic;
+        }
+        
+        /* 確保一致的標題顏色 */
+        h1 {
+            color: #5a84ff;
+        }
+        
+        h3 {
+            color: #00ffb3;
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #323259;
+        }
+
+        .disclaimer {
+            background-color: rgba(255, 58, 76, 0.1);
+            border-left: 3px solid #ff3a4c;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .disclaimer h3 {
+            color: #ff3a4c;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .disclaimer p {
+            font-size: 24px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Password Wordlist Generator</h1>
+        
+        <div class="form-group">
+            <p>Enter personal information to generate a targeted wordlist.</p>
+            <p>Add all relevant information about the target.</p>
+            
+            <h2>Information Guide</h2>
+            <div class="info-guide">
+                <p>The following information types can be used to generate an effective password wordlist. Please provide as much relevant information as possible:</p>
+                
+                <h3>Personal Identifiers</h3>
+                <ul>
+                    <li><strong>Name:</strong> Full names, nicknames, or aliases of the target person and their close associates (family members, friends, partners). Also consider including organization names or their abbreviations if relevant.</li>
+                    <li><strong>ID:</strong> National identification numbers, company unified business numbers, or other official identification codes.</li>
+                </ul>
+                
+                <h3>Contact Information</h3>
+                <ul>
+                    <li><strong>Phone Number:</strong> Mobile or landline numbers, including the two-digit area code prefix. Consider both current and previous numbers.</li>
+                    <li><strong>SSID:</strong> Wi-Fi network names (SSIDs) used at home, work, or frequently visited locations.</li>
+                </ul>
+                
+                <h3>Important Dates</h3>
+                <ul>
+                    <li><strong>Date:</strong> Significant dates in the format YYYY-MM-DD, such as:
+                        <ul>
+                            <li>Birthdays (target's own or those of close associates)</li>
+                            <li>Anniversaries or memorable events</li>
+                            <li>Current date or other relevant timeframes</li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <p><em>Note: The more accurate and comprehensive the information provided, the more effective the generated wordlist will be.</em></p>
+            </div>
+        </div>
+        
+        <form id="wordlistForm">
+            <div class="form-group">
+                <label for="output_filename">Output Filename:</label>
+                <input type="text" id="output_filename" name="output_filename" placeholder="wordlist.txt" required>
+            </div>
+            
+            <div class="form-group">
+                <h2>Personal Information:</h2>
+                <div id="info-container">
+                    <!-- 資訊類別區塊會動態加入這裡 -->
+                </div>
+                
+                <div class="input-group">
+                    <select id="new_info_type">
+                        <option value="date">Date</option>
+                        <option value="tel">Phone Number</option>
+                        <option value="name">Name</option>
+                        <option value="ID">ID Number</option>
+                        <option value="SSID">Wi-Fi SSID</option>
+                    </select>
+                    <button type="button" class="add-btn" onclick="addInfoType()">+ Add Info Type</button>
+                </div>
+            </div>
+            
+            <button type="submit">Generate Wordlist</button>
+        </form>
+        
+        <div class="terminal-output" id="output">
+> System ready for wordlist generation...
+> Enter target information and submit to begin.
+        </div>
+        
+        <div class="status" id="status" style="display: none;">
+            Processing request...
+        </div>
+
+        <footer class="footer">
+            <div class="disclaimer">
+                <h3>DISCLAIMER</h3>
+                <p>This tool is provided for educational and security research purposes only.</p>
+                <p>The user assumes all responsibility for the use of this tool.</p>
+                <p>Unauthorized access to computer systems and networks is illegal.</p>
+                <p>DO NOT use this tool for any illegal, unauthorized, or malicious activities.</p>
+            </div>
+        </footer>
+    </div>
+    
+    <script>
+        // 用來存儲所有資訊的物件
+        let infoData = {};
+        
+        // 添加新的資訊類別
+        function addInfoType() {
+            const infoType = document.getElementById('new_info_type').value;
+            const infoTypeText = document.getElementById('new_info_type').options[document.getElementById('new_info_type').selectedIndex].text;
+            
+            // 檢查是否已存在此類別
+            if (document.getElementById(`section-${infoType}`)) {
+                alert(`${infoTypeText} is already added.`);
+                return;
+            }
+            
+            // 初始化資料結構
+            if (!infoData[infoType]) {
+                infoData[infoType] = [];
+            }
+            
+            const container = document.getElementById('info-container');
+            
+            // 創建新的資訊類別區塊
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'info-section';
+            sectionDiv.id = `section-${infoType}`;
+            
+            sectionDiv.innerHTML = `
+                <div class="info-section-title">
+                    <h3>${infoTypeText}</h3>
+                    <button type="button" class="delete-btn" onclick="removeInfoType('${infoType}')">Remove this type</button>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="new_value_${infoType}" placeholder="Enter ${infoTypeText.toLowerCase()} value">
+                    <button type="button" class="add-btn" onclick="addInfoValue('${infoType}')">Add</button>
+                </div>
+                <div class="info-values" id="values-${infoType}">
+                    <!-- 該類別的值會動態加入這裡 -->
+                </div>
+            `;
+            
+            container.appendChild(sectionDiv);
+        }
+        
+        // 移除資訊類別
+        function removeInfoType(infoType) {
+            const sectionElement = document.getElementById(`section-${infoType}`);
+            if (sectionElement) {
+                sectionElement.remove();
+                // 從資料中移除
+                delete infoData[infoType];
+            }
+        }
+        
+        // 添加資訊值
+        function addInfoValue(infoType) {
+            const inputElement = document.getElementById(`new_value_${infoType}`);
+            const value = inputElement.value.trim();
+            
+            if (!value) {
+                alert("Please enter a value.");
+                return;
+            }
+            
+            // 檢查是否重複
+            if (infoData[infoType].includes(value)) {
+                alert("This value is already added.");
+                return;
+            }
+            
+            // 添加到資料
+            infoData[infoType].push(value);
+            
+            // 添加到 UI
+            const valuesContainer = document.getElementById(`values-${infoType}`);
+            const valueElement = document.createElement('div');
+            valueElement.className = 'value-tag';
+            valueElement.innerHTML = `
+                ${value} <button type="button" class="delete-btn" onclick="removeInfoValue('${infoType}', '${value}')">X</button>
+            `;
+            
+            valuesContainer.appendChild(valueElement);
+            
+            // 清空輸入框
+            inputElement.value = '';
+        }
+        
+        // 移除資訊值
+        function removeInfoValue(infoType, value) {
+            // 從資料中移除
+            infoData[infoType] = infoData[infoType].filter(item => item !== value);
+            
+            // 重新渲染該類別的所有值
+            const valuesContainer = document.getElementById(`values-${infoType}`);
+            valuesContainer.innerHTML = '';
+            
+            infoData[infoType].forEach(val => {
+                const valueElement = document.createElement('div');
+                valueElement.className = 'value-tag';
+                valueElement.innerHTML = `
+                    ${val} <button type="button" class="delete-btn" onclick="removeInfoValue('${infoType}', '${val}')">X</button>
+                `;
+                valuesContainer.appendChild(valueElement);
+            });
+        }
+        
+        // 表單提交
+        document.getElementById('wordlistForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const statusDiv = document.getElementById('status');
+            const outputDiv = document.getElementById('output');
+            
+            // 檢查是否添加了任何資訊
+            let hasInfo = false;
+            for (const type in infoData) {
+                if (infoData[type].length > 0) {
+                    hasInfo = true;
+                    break;
+                }
+            }
+            
+            if (!hasInfo) {
+                alert("Please add at least one piece of information.");
+                return;
+            }
+            
+            // 顯示處理狀態
+            statusDiv.className = 'status';
+            statusDiv.textContent = 'Processing request...';
+            statusDiv.style.display = 'block';
+            
+            outputDiv.innerHTML = '> Starting wordlist generation...\n> Please wait, this may take a moment.';
+            
+            // 整理要發送的資料
+            const formData = {
+                output_filename: document.getElementById('output_filename').value,
+                info_data: infoData
+            };
+            
+            // 發送 JSON 資料到後端
+            fetch('/generate_wordlist', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server error: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    statusDiv.textContent = 'Wordlist generated successfully!';
+                    outputDiv.innerHTML = '> Wordlist generation complete.\n> File saved as: ' + data.filename + '\n> Generated ' + data.count + ' passwords.\n\n' + data.sample;
+                    
+                    if (data.download_link) {
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = data.download_link;
+                        downloadLink.textContent = 'Download Wordlist';
+                        downloadLink.className = 'download-link';
+                        downloadLink.style.display = 'block';
+                        downloadLink.style.marginTop = '20px';
+                        downloadLink.style.color = '#00ffb3';
+                        statusDiv.appendChild(downloadLink);
+                    }
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Error: ' + data.error;
+                    outputDiv.innerHTML += '\n> ERROR: ' + data.error;
+                }
+            })
+            .catch(error => {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = 'Error: ' + error.message;
+                outputDiv.innerHTML += '\n> CONNECTION ERROR: ' + error.message;
+            });
+        });
+    </script>
+</body>
+</html>

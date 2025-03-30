@@ -83,3 +83,29 @@ h2 {
 .card a:hover {
     text-decoration: underline;
 }
+
+/* ===== footer ===== */
+
+.footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #323259;
+}
+
+.disclaimer {
+    background-color: rgba(255, 58, 76, 0.1);
+    border-left: 3px solid #ff3a4c;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.disclaimer h3 {
+    color: #ff3a4c;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.disclaimer p {
+    font-size: 24px;
+    margin: 5px 0;
+}
