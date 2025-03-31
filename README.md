@@ -6,6 +6,7 @@
   <img alt="Logo" src="icon/Wide/PNG-Light.png" />
 </picture>
 
+<<<<<<< Updated upstream
 ## Disclaimer
 
 > [!Warning]
@@ -14,9 +15,10 @@
 > 
 > DO NOT use this tool for any illegal, unauthorized, or malicious activities.
 
+=======
+>>>>>>> Stashed changes
 ## Table of Content
 
-- [Demo](#demo)
 - [Table of Content](#table-of-content)
 - [About HackMaster Pi](#about-hackmaster-pi)
 - [Assemble](#assemble)
