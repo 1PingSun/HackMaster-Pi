@@ -4,9 +4,13 @@
   <img alt="Logo" src="icon/Wide/PNG-Light.png" />
 </picture>
 
+[![License GPL](https://img.shields.io/badge/license-GPL-blue.svg)](https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/refs/heads/main/LICENSE)
+
+## Demo
 
 ## Table of Content
 
+- [Demo](#demo)
 - [Table of Content](#table-of-content)
 - [About HackMaster Pi](#about-hackmaster-pi)
 - [Assemble](#assemble)
