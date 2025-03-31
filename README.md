@@ -1,3 +1,9 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="icon/Wide/PNG-Dark.png" />
+  <source media="(prefers-color-scheme: light)" srcset="icon/Wide/PNG-Light.png" />
+  <img alt="Logo" src="icon/Wide/PNG-Light.png" />
+</picture>
+
 
 ## Table of Content
 
@@ -19,9 +25,14 @@ If you find this project useful, please give it a star on GitHub. Your support i
 
 1. Download models and use 3D printer to print HackMaster Pi's case. (To-do)
 2. Connect USB to TTL module.
+   * Make sure your TTL module voltag is 3.3v
+   * Raspberry Pi TX (GPIO14) → USB-TTL RX
+   * Raspberry Pi RX (GPIO15) → USB-TTL TX
+   * Raspberry Pi GND → USB-TTL GND
+   * They aren't need VCC
 
 ## Installation
 
-
+1. 
 
 ## Usage
