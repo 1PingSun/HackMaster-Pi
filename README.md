@@ -10,11 +10,7 @@
 
 > [!Warning]
 >
-> This tool is provided for educational and security research purposes only.
->
-> The user assumes all responsibility for the use of this tool.
->
-> Unauthorized access to computer systems and networks is illegal.
+> This tool is provided for educational and security research purposes only. The user assumes all responsibility for the use of this tool. Unauthorized access to computer systems and networks is illegal.
 > 
 > DO NOT use this tool for any illegal, unauthorized, or malicious activities.
 
