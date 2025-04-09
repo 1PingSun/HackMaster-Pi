@@ -24,9 +24,7 @@ body {
 }
 
 .back-button {
-    position: absolute;
-    left: 20px;
-    top: 20px;
+    width: fit-content;
     background-color: transparent;
     border: 2px solid #5a84ff;
     color: #5a84ff;
@@ -46,7 +44,8 @@ body {
     width: 100%;
     display: flex;
     justify-content: center;
-    align-items: center;
+    /* align-items: center; */
+    flex-direction: column;
     margin-bottom: 30px;
 }
 
