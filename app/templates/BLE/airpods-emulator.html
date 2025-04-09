@@ -4,38 +4,269 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-    <title>Document</title>
+    <title>Airpods Emulator - HackMaster Pi</title>
     <style>
-        button {
-            background-color: #ff3a4c;
-            color: #0f0f17;
-            border: none;
-            padding: 12px 20px;
-            cursor: pointer;
-            font-family: 'VT323', monospace;
-            font-size: 20px;
-            text-transform: uppercase;
-            margin-right: 10px;
-            transition: background-color 0.3s;
+        @font-face {
+            font-family: 'VT323';
+            src: url('/static/fonts/VT323-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
         }
-        
-        button:hover {
-            background-color: #e72e3d;
+
+        body {
+            font-family: 'VT323', monospace;
+            background-color: #0f0f17;
+            color: #c7d3e3;
+            margin: 0;
+            padding: 20px;
+            font-size: 18px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        .header-container {
+            position: relative;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            margin-bottom: 30px;
+        }
+
+        .back-button {
+            width: fit-content;
+            background-color: transparent;
+            border: 2px solid #5a84ff;
+            color: #5a84ff;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .back-button:hover {
+            background-color: #5a84ff;
+            color: #0f0f17;
         }
 
         h1 {
             color: #5a84ff;
+            display: flex;
+            justify-content: center;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #1e1e2f;
+            color: #00ffb3;
+            border: 2px solid #00ffb3;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-family: 'VT323', monospace;
+            font-size: 22px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 179, 0.3);
+        }
+
+        button:hover {
+            background-color: rgba(0, 255, 179, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 179, 0.5);
+        }
+
+        button.stop {
+            color: #ff3a4c;
+            border: 2px solid #ff3a4c;
+            box-shadow: 0 0 10px rgba(255, 58, 76, 0.3);
+        }
+
+        button.stop:hover {
+            background-color: rgba(255, 58, 76, 0.2);
+            box-shadow: 0 0 20px rgba(255, 58, 76, 0.5);
+        }
+
+        button:disabled {
+            background-color: #1e1e2f;
+            border-color: #444;
+            color: #777;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .status-indicator {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            font-size: 22px;
+            background-color: #1e1e2f;
+            border-left: 3px solid #5a84ff;
+        }
+
+        .status-running {
+            display: block;
+            border-color: #00ffb3;
+            color: #00ffb3;
+        }
+
+        .status-stopped {
+            display: block;
+            border-color: #ff3a4c;
+            color: #ff3a4c;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(26, 26, 46, 0.5);
+            border-radius: 50%;
+            border-top-color: #5a84ff;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+            display: none;
+            box-shadow: 0 0 10px rgba(90, 132, 255, 0.5);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header-container">
-            <a href="/" class="back-button">← Back</a>
-            <h1>Airpods Emulator</h1>
+            <a href="/" class="back-button">← BACK</a>
+            <h1>AirPods Emulator</h1>
         </div>
-        <button type="submit">Stop</button>
+        <button id="control-button" type="button">
+            <span id="button-text">Loading...</span>
+            <span class="loading" id="loading-spinner"></span>
+        </button>
+        <div class="status-indicator" id="status-indicator"></div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const controlButton = document.getElementById('control-button');
+            const buttonText = document.getElementById('button-text');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const statusIndicator = document.getElementById('status-indicator');
+            
+            // 初始狀態檢查
+            checkStatus();
+            
+            // 定時檢查狀態（每 5 秒）
+            setInterval(checkStatus, 5000);
+            
+            // 按鈕點擊事件
+            controlButton.addEventListener('click', function() {
+                // 顯示loading狀態
+                controlButton.disabled = true;
+                loadingSpinner.style.display = 'inline-block';
+                
+                if (controlButton.classList.contains('stop')) {
+                    // 如果目前是停止按鈕，發送停止請求
+                    fetch('/BLE/airpods-emulator/stop', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Stop response:', data);
+                        checkStatus(); // 重新檢查狀態
+                    })
+                    .catch(error => {
+                        console.error('Error stopping emulator:', error);
+                        showError('停止模擬器時發生錯誤');
+                    })
+                    .finally(() => {
+                        loadingSpinner.style.display = 'none';
+                        controlButton.disabled = false;
+                    });
+                } else {
+                    // 如果目前是啟動按鈕，發送啟動請求
+                    fetch('/BLE/airpods-emulator/start', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Start response:', data);
+                        checkStatus(); // 重新檢查狀態
+                    })
+                    .catch(error => {
+                        console.error('Error starting emulator:', error);
+                        showError('啟動模擬器時發生錯誤');
+                    })
+                    .finally(() => {
+                        loadingSpinner.style.display = 'none';
+                        controlButton.disabled = false;
+                    });
+                }
+            });
+            
+            // 檢查當前狀態
+            function checkStatus() {
+                fetch('/BLE/airpods-emulator/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Status:', data);
+                        updateUI(data);
+                    })
+                    .catch(error => {
+                        console.error('Error checking status:', error);
+                        showError('無法獲取模擬器狀態');
+                    });
+            }
+            
+            // 更新UI
+            function updateUI(data) {
+                controlButton.disabled = false;
+                loadingSpinner.style.display = 'none';
+                
+                if (data.status === 'running') {
+                    // 如果正在運行，顯示停止按鈕
+                    buttonText.textContent = 'TERMINATE';
+                    controlButton.classList.add('stop');
+                    statusIndicator.textContent = `EMULATOR ONLINE [PID: ${data.pid}]`;
+                    statusIndicator.className = 'status-indicator status-running';
+                } else {
+                    // 如果未運行，顯示啟動按鈕
+                    buttonText.textContent = 'ACTIVATE';
+                    controlButton.classList.remove('stop');
+                    statusIndicator.textContent = 'EMULATOR OFFLINE';
+                    statusIndicator.className = 'status-indicator status-stopped';
+                }
+            }
+            
+            // 顯示錯誤
+            function showError(message) {
+                statusIndicator.textContent = `ERROR: ${message.toUpperCase()}`;
+                statusIndicator.className = 'status-indicator status-stopped';
+                controlButton.disabled = false;
+                loadingSpinner.style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>
-

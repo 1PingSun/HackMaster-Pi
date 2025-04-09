@@ -1,0 +1,137 @@
+@font-face {
+    font-family: 'VT323';
+    src: url('/static/fonts/VT323-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    font-family: 'VT323', monospace;
+    background-color: #0f0f17;
+    color: #c7d3e3;
+    font-family: 'VT323', monospace;
+    margin: 0;
+    padding: 20px;
+    font-size: 14px;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    max-width: 800px;
+    margin: auto;
+    padding: 20px;
+}
+
+.back-button {
+    width: fit-content;
+    background-color: transparent;
+    border: 2px solid #5a84ff;
+    color: #5a84ff;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.back-button:hover {
+    background-color: #5a84ff;
+    color: #0f0f17;
+}
+
+.header-container {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    /* align-items: center; */
+    flex-direction: column;
+    margin-bottom: 30px;
+}
+
+h1, h2 {
+    color: #5a84ff;
+}
+
+h1 {
+    display: flex;
+    justify-content: center;
+    font-size: 2.5em;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 2em;
+    margin-bottom: 10px;
+}
+
+.card-container {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: left;
+    gap: 20px;
+}
+
+.card {
+    background-color: #1e1e2f;
+    width: calc(33.333% - 60px);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s;
+
+    hyphens: auto;
+    word-break: break-word;
+    -webkit-hyphens: auto;
+    -moz-hyphens: auto;
+    -ms-hyphens: auto;
+}
+
+.card h3 {
+    font-size: 1.1em;
+    color: #00ffb3;
+    margin: 0;
+    margin-bottom: 20px;
+}
+
+.card p {
+    margin: 10px 0;
+    font-size: 1em;
+}
+
+.card a {
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.card a:hover {
+    text-decoration: underline;
+}
+
+/* ===== footer ===== */
+
+.footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #323259;
+}
+
+.disclaimer {
+    background-color: rgba(255, 58, 76, 0.1);
+    border-left: 3px solid #ff3a4c;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.disclaimer h3 {
+    color: #ff3a4c;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.disclaimer p {
+    font-size: 24px;
+    margin: 5px 0;
+}

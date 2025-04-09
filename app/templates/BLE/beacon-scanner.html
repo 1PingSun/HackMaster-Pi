@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beacon Scanner</title>
+    <!-- <style>
+        @font-face {
+            font-family: 'VT323';
+            src: url('/static/fonts/VT323-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'VT323', monospace;
+            background-color: #0f0f17;
+            color: #c7d3e3;
+            margin: 0;
+            padding: 20px;
+            font-size: 18px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        .header-container {
+            position: relative;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            margin-bottom: 30px;
+        }
+
+        .back-button {
+            width: fit-content;
+            background-color: transparent;
+            border: 2px solid #5a84ff;
+            color: #5a84ff;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .back-button:hover {
+            background-color: #5a84ff;
+            color: #0f0f17;
+        }
+
+        h1 {
+            color: #5a84ff;
+            display: flex;
+            justify-content: center;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #1e1e2f;
+            color: #00ffb3;
+            border: 2px solid #00ffb3;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-family: 'VT323', monospace;
+            font-size: 22px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 179, 0.3);
+        }
+
+        button:hover {
+            background-color: rgba(0, 255, 179, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 179, 0.5);
+        }
+
+        button.stop {
+            color: #ff3a4c;
+            border: 2px solid #ff3a4c;
+            box-shadow: 0 0 10px rgba(255, 58, 76, 0.3);
+        }
+
+        button.stop:hover {
+            background-color: rgba(255, 58, 76, 0.2);
+            box-shadow: 0 0 20px rgba(255, 58, 76, 0.5);
+        }
+
+        button:disabled {
+            background-color: #1e1e2f;
+            border-color: #444;
+            color: #777;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .status-indicator {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 22px;
+            background-color: #1e1e2f;
+            border-left: 3px solid #5a84ff;
+        }
+
+        .beacon-list {
+            margin-top: 20px;
+            background-color: #1e1e2f;
+            border-radius: 5px;
+            padding: 0;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #323259;
+        }
+
+        .beacon-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .beacon-list::-webkit-scrollbar-track {
+            background: #1e1e2f;
+            border-radius: 5px;
+        }
+
+        .beacon-list::-webkit-scrollbar-thumb {
+            background: #5a84ff;
+            border-radius: 5px;
+        }
+
+        .beacon-item {
+            padding: 15px;
+            border-bottom: 1px solid #323259;
+            transition: background-color 0.3s;
+        }
+
+        .beacon-item:last-child {
+            border-bottom: none;
+        }
+
+        .beacon-item:hover {
+            background-color: #2a2a45;
+        }
+
+        .beacon-uuid {
+            color: #00ffb3;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .beacon-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+            color: #c7d3e3;
+        }
+
+        .beacon-rssi {
+            color: #ff3a4c;
+        }
+
+        .beacon-rssi.strong {
+            color: #00ffb3;
+        }
+
+        .beacon-rssi.medium {
+            color: #f7cf4c;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .scanner-status {
+            font-size: 20px;
+            color: #f7cf4c;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(26, 26, 46, 0.5);
+            border-radius: 50%;
+            border-top-color: #5a84ff;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+            box-shadow: 0 0 10px rgba(90, 132, 255, 0.5);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .copy-btn {
+            background-color: transparent;
+            border: 1px solid #5a84ff;
+            color: #5a84ff;
+            padding: 4px 8px;
+            font-size: 14px;
+            margin-left: 10px;
+            box-shadow: none;
+        }
+
+        .copy-btn:hover {
+            background-color: rgba(90, 132, 255, 0.2);
+            box-shadow: 0 0 5px rgba(90, 132, 255, 0.5);
+        }
+
+        .uuid-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .no-beacons {
+            text-align: center;
+            padding: 30px;
+            color: #777;
+            font-size: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .beacon-item {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .filter-container {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #1e1e2f;
+            border-radius: 5px;
+            border: 1px solid #323259;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 8px;
+            background-color: #0f0f17;
+            border: 1px solid #323259;
+            color: #c7d3e3;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            border-radius: 4px;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #5a84ff;
+            box-shadow: 0 0 5px rgba(90, 132, 255, 0.5);
+        }
+    </style> -->
+</head>
+<body>
+    <div class="container">
+        <div class="header-container">
+            <a href="/" class="back-button">← BACK</a>
+            <h1>BEACON SCANNER</h1>
+        </div>
+
+        <div class="controls">
+            <button id="scan-button">SCAN BEACONS</button>
+            <div class="scanner-status">
+                <span id="status-text">READY</span>
+                <span id="loading-spinner" class="loading hidden"></span>
+            </div>
+        </div>
+
+        <div class="filter-container">
+            <input type="text" id="filter-input" class="filter-input" placeholder="FILTER BY UUID OR NAME...">
+        </div>
+
+        <div class="beacon-list" id="beacon-list">
+            <div class="no-beacons">NO BEACONS DETECTED</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const scanButton = document.getElementById('scan-button');
+            const statusText = document.getElementById('status-text');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const beaconList = document.getElementById('beacon-list');
+            const filterInput = document.getElementById('filter-input');
+            
+            let beacons = [];
+            let scanning = false;
+            let scanInterval = null;
+            
+            // 點擊掃描按鈕
+            scanButton.addEventListener('click', function() {
+                if (scanning) {
+                    stopScanning();
+                } else {
+                    startScanning();
+                }
+            });
+            
+            // 過濾輸入框
+            filterInput.addEventListener('input', function() {
+                filterBeacons(this.value.trim().toLowerCase());
+            });
+            
+            // 開始掃描
+            function startScanning() {
+                scanning = true;
+                scanButton.textContent = 'STOP SCAN';
+                scanButton.classList.add('stop');
+                statusText.textContent = 'SCANNING...';
+                loadingSpinner.classList.remove('hidden');
+                
+                // 先進行一次掃描
+                scanBeacons();
+                
+                // 設定定時掃描 (每 5 秒)
+                scanInterval = setInterval(scanBeacons, 5000);
+            }
+            
+            // 停止掃描
+            function stopScanning() {
+                scanning = false;
+                scanButton.textContent = 'SCAN BEACONS';
+                scanButton.classList.remove('stop');
+                statusText.textContent = 'READY';
+                loadingSpinner.classList.add('hidden');
+                
+                // 清除定時掃描
+                if (scanInterval) {
+                    clearInterval(scanInterval);
+                    scanInterval = null;
+                }
+            }
+            
+            // 掃描 Beacon
+            function scanBeacons() {
+                fetch('/BLE/beacon-scanner/scan', {
+                    method: 'GET'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Scanner response:', data);
+                    if (data.beacons && Array.isArray(data.beacons)) {
+                        beacons = data.beacons;
+                        renderBeaconList(beacons);
+                        
+                        // 如果有過濾條件，重新應用過濾
+                        const filterValue = filterInput.value.trim().toLowerCase();
+                        if (filterValue) {
+                            filterBeacons(filterValue);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error scanning beacons:', error);
+                    statusText.textContent = 'ERROR';
+                    stopScanning();
+                });
+            }
+            
+            // 渲染 Beacon 列表
+            function renderBeaconList(beacons) {
+                // 清空列表
+                beaconList.innerHTML = '';
+                
+                if (beacons.length === 0) {
+                    beaconList.innerHTML = '<div class="no-beacons">NO BEACONS DETECTED</div>';
+                    return;
+                }
+                
+                // 按 RSSI 強度排序 (信號強度由高到低)
+                beacons.sort((a, b) => b.rssi - a.rssi);
+                
+                // 為每個 beacon 創建列表項
+                beacons.forEach(beacon => {
+                    const item = document.createElement('div');
+                    item.className = 'beacon-item';
+                    
+                    // 決定 RSSI 的 CSS 類別
+                    let rssiClass = 'weak';
+                    if (beacon.rssi > -60) {
+                        rssiClass = 'strong';
+                    } else if (beacon.rssi > -80) {
+                        rssiClass = 'medium';
+                    }
+                    
+                    // 創建 UUID 容器以便包含複製按鈕
+                    const uuidContainer = document.createElement('div');
+                    uuidContainer.className = 'uuid-container';
+                    
+                    const uuidSpan = document.createElement('span');
+                    uuidSpan.className = 'beacon-uuid';
+                    uuidSpan.textContent = beacon.uuid || 'Unknown UUID';
+                    
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-btn';
+                    copyBtn.textContent = 'COPY';
+                    copyBtn.onclick = function() {
+                        navigator.clipboard.writeText(beacon.uuid).then(() => {
+                            copyBtn.textContent = 'COPIED!';
+                            setTimeout(() => {
+                                copyBtn.textContent = 'COPY';
+                            }, 2000);
+                        });
+                    };
+                    
+                    uuidContainer.appendChild(uuidSpan);
+                    uuidContainer.appendChild(copyBtn);
+                    
+                    // 其他詳細信息
+                    const details = document.createElement('div');
+                    details.className = 'beacon-details';
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = `Name: ${beacon.name || 'Unknown'}`;
+                    
+                    const rssiSpan = document.createElement('span');
+                    rssiSpan.className = `beacon-rssi ${rssiClass}`;
+                    rssiSpan.textContent = `RSSI: ${beacon.rssi} dBm`;
+                    
+                    details.appendChild(nameSpan);
+                    details.appendChild(rssiSpan);
+                    
+                    // 組合所有元素
+                    item.appendChild(uuidContainer);
+                    item.appendChild(details);
+                    beaconList.appendChild(item);
+                });
+            }
+            
+            // 過濾 Beacons
+            function filterBeacons(filterText) {
+                if (!filterText) {
+                    renderBeaconList(beacons);
+                    return;
+                }
+                
+                const filtered = beacons.filter(beacon => {
+                    const uuid = (beacon.uuid || '').toLowerCase();
+                    const name = (beacon.name || '').toLowerCase();
+                    return uuid.includes(filterText) || name.includes(filterText);
+                });
+                
+                renderBeaconList(filtered);
+            }
+            
+            // 初始顯示
+            beaconList.innerHTML = '<div class="no-beacons">PRESS SCAN TO BEGIN</div>';
+        });
+    </script>
+</body>
+</html>
