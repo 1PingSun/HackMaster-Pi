@@ -15,6 +15,13 @@ running_process = None
 
 templates = Jinja2Templates(directory="templates")
 
+@router.get("/beacon-scanner", response_class=HTMLResponse)
+def read_airpods_emulator(request: Request):
+    return templates.TemplateResponse(
+        "BLE/beacon-scanner.html", 
+        {"request": request, "message": "Beacon Scanner"}
+    )
+
 @router.get("/airpods-emulator", response_class=HTMLResponse)
 def read_airpods_emulator(request: Request):
     return templates.TemplateResponse(
@@ -33,7 +40,7 @@ async def start_airpods_scan():
     try:
         # 使用 pkexec 或 sudo 執行腳本
         # 注意：需要配置 sudoers 允許無密碼執行此特定腳本
-        cmd = ["sudo", "python3", "/path/to/apple_bleee/adv_airpods.py"]
+        cmd = ["sudo", "python3", "./apple_bleee/adv_airpods.py"]
         
         # 啟動進程，不阻塞 API
         process = subprocess.Popen(
