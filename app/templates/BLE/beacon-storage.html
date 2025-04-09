@@ -1,87 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Beacon Storage</title>
+    <title>Beacon Storage - HackMaster Pi</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-    <style>
-        .profile-form {
-            margin: 20px;
-            padding: 20px;
-            background: #1a1a24;
-            border-radius: 8px;
-        }
-        .profile-list {
-            margin: 20px;
-        }
-        .profile-item {
-            background: #1a1a24;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .delete-btn {
-            background: #ff4444;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        input[type="text"] {
-            background: #2a2a34;
-            border: 1px solid #3a3a44;
-            color: white;
-            padding: 8px;
-            margin: 5px 0;
-            border-radius: 4px;
-        }
-        button[type="submit"] {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-    </style>
+    <meta name="theme-color" content="#0f0f17">
 </head>
 <body>
     <div class="container">
-        <h1>Beacon Storage</h1>
+        <div class="header-container">
+            <a href="/" class="back-button">← BACK</a>
+            <h1>BEACON STORAGE</h1>
+        </div>
         
-        <div class="profile-form">
-            <h2>Add New Profile</h2>
+        <div class="form-group profile-form">
+            <h2>ADD NEW PROFILE</h2>
             <form id="profileForm">
-                <div>
-                    <label for="name">Profile Name:</label><br>
-                    <input type="text" id="name" name="name" required>
+                <div class="input-group">
+                    <label for="name">Profile Name:</label>
+                    <input type="text" id="name" name="name" required placeholder="Enter profile name">
                 </div>
-                <div>
-                    <label for="uuid">UUID (e.g. AA 21 98 B2 46 30 11 EE BE 56 02 42 AC 12 00 02):</label><br>
-                    <input type="text" id="uuid" name="uuid" required>
+                <div class="input-group">
+                    <label for="uuid">UUID:</label>
+                    <input type="text" id="uuid" name="uuid" required placeholder="e.g. AA 21 98 B2 46 30 11 EE BE 56 02 42 AC 12 00 02">
                 </div>
-                <div>
-                    <label for="major">Major (e.g. 00 01):</label><br>
-                    <input type="text" id="major" name="major" required>
+                <div class="input-group">
+                    <label for="major">Major:</label>
+                    <input type="text" id="major" name="major" required placeholder="e.g. 00 01">
                 </div>
-                <div>
-                    <label for="minor">Minor (e.g. 00 02):</label><br>
-                    <input type="text" id="minor" name="minor" required>
+                <div class="input-group">
+                    <label for="minor">Minor:</label>
+                    <input type="text" id="minor" name="minor" required placeholder="e.g. 00 02">
                 </div>
-                <div>
-                    <label for="power">Power (e.g. C8):</label><br>
-                    <input type="text" id="power" name="power" required>
+                <div class="input-group">
+                    <label for="power">Power:</label>
+                    <input type="text" id="power" name="power" required placeholder="e.g. C8">
                 </div>
-                <button type="submit">Add Profile</button>
+                <button type="submit" class="add-btn">ADD PROFILE</button>
             </form>
         </div>
 
         <div class="profile-list" id="profileList">
-            <h2>Saved Profiles</h2>
+            <h2>SAVED PROFILES</h2>
             <!-- Profiles will be loaded here -->
         </div>
     </div>
@@ -89,24 +50,43 @@
     <script>
         // 載入設定檔
         async function loadProfiles() {
-            const response = await fetch('/BLE/beacon-storage/profiles');
-            const profiles = await response.json();
-            const profileList = document.getElementById('profileList');
-            
-            let html = '<h2>Saved Profiles</h2>';
-            profiles.forEach(profile => {
-                html += `
-                    <div class="profile-item">
-                        <div>
-                            <strong>${profile.name}</strong><br>
-                            UUID: ${profile.uuid}<br>
-                            Major: ${profile.major}, Minor: ${profile.minor}, Power: ${profile.power}
-                        </div>
-                        <button class="delete-btn" onclick="deleteProfile('${profile.name}')">Delete</button>
-                    </div>
-                `;
-            });
-            profileList.innerHTML = html;
+            try {
+                const response = await fetch('/BLE/beacon-storage/profiles');
+                if (!response.ok) {
+                    throw new Error('Failed to load profiles');
+                }
+                const profiles = await response.json();
+                const profileList = document.getElementById('profileList');
+                
+                let html = '<h2>SAVED PROFILES</h2>';
+                if (profiles.length === 0) {
+                    html += '<div class="no-profiles">NO SAVED PROFILES FOUND</div>';
+                } else {
+                    profiles.forEach(profile => {
+                        html += `
+                            <div class="profile-item">
+                                <div class="profile-details">
+                                    <div class="profile-name">${profile.name}</div>
+                                    <div class="profile-info">
+                                        <span class="profile-label">UUID:</span> <span class="profile-value">${profile.uuid}</span>
+                                    </div>
+                                    <div class="profile-info">
+                                        <span class="profile-label">Major:</span> <span class="profile-value">${profile.major}</span>, 
+                                        <span class="profile-label">Minor:</span> <span class="profile-value">${profile.minor}</span>, 
+                                        <span class="profile-label">Power:</span> <span class="profile-value">${profile.power}</span>
+                                    </div>
+                                </div>
+                                <button class="delete-btn" onclick="deleteProfile('${profile.name}')">DELETE</button>
+                            </div>
+                        `;
+                    });
+                }
+                profileList.innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+                const profileList = document.getElementById('profileList');
+                profileList.innerHTML = '<h2>SAVED PROFILES</h2><div class="status error">ERROR LOADING PROFILES</div>';
+            }
         }
 
         // 新增設定檔
@@ -114,6 +94,14 @@
             e.preventDefault();
             const formData = new FormData(e.target);
             const profile = Object.fromEntries(formData);
+            
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'status';
+            const form = document.getElementById('profileForm');
+            
+            // 移除先前的狀態消息
+            const oldStatus = form.querySelector('.status');
+            if (oldStatus) oldStatus.remove();
             
             try {
                 const response = await fetch('/BLE/beacon-storage/profiles', {
@@ -124,15 +112,32 @@
                 
                 if (response.ok) {
                     e.target.reset();
+                    statusDiv.textContent = 'PROFILE ADDED SUCCESSFULLY';
+                    statusDiv.className = 'status';
+                    form.appendChild(statusDiv);
                     loadProfiles();
+                    
+                    // 3秒後移除成功消息
+                    setTimeout(() => {
+                        statusDiv.remove();
+                    }, 3000);
+                } else {
+                    throw new Error('Failed to add profile');
                 }
             } catch (error) {
                 console.error('Error:', error);
+                statusDiv.textContent = 'ERROR: FAILED TO ADD PROFILE';
+                statusDiv.className = 'status error';
+                form.appendChild(statusDiv);
             }
         };
 
         // 刪除設定檔
         async function deleteProfile(name) {
+            if (!confirm(`Are you sure you want to delete the profile "${name}"?`)) {
+                return;
+            }
+            
             try {
                 const response = await fetch(`/BLE/beacon-storage/profiles/${name}`, {
                     method: 'DELETE'
@@ -140,14 +145,19 @@
                 
                 if (response.ok) {
                     loadProfiles();
+                } else {
+                    throw new Error('Failed to delete profile');
                 }
             } catch (error) {
                 console.error('Error:', error);
+                alert('ERROR: FAILED TO DELETE PROFILE');
             }
         }
 
         // 初始載入
-        loadProfiles();
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProfiles();
+        });
     </script>
 </body>
 </html>

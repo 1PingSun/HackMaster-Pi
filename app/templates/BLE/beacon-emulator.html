@@ -1,70 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Beacon Emulator</title>
+    <title>Beacon Emulator - HackMaster Pi</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-    <style>
-        .control-panel {
-            margin: 20px;
-            padding: 20px;
-            background: #1a1a24;
-            border-radius: 8px;
-        }
-        .profile-select {
-            background: #2a2a34;
-            border: 1px solid #3a3a44;
-            color: white;
-            padding: 8px;
-            margin: 5px 0;
-            border-radius: 4px;
-            width: 100%;
-        }
-        .control-btn {
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            border: none;
-            margin: 5px;
-        }
-        .start-btn {
-            background: #4CAF50;
-            color: white;
-        }
-        .stop-btn {
-            background: #ff4444;
-            color: white;
-        }
-        .status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        .running {
-            background: #4CAF50;
-            color: white;
-        }
-        .stopped {
-            background: #ff4444;
-            color: white;
-        }
-    </style>
+    <meta name="theme-color" content="#0f0f17">
 </head>
 <body>
     <div class="container">
-        <h1>Beacon Emulator</h1>
+        <div class="header-container">
+            <a href="/" class="back-button">← BACK</a>
+            <h1>BEACON EMULATOR</h1>
+        </div>
         
-        <div class="control-panel">
-            <h2>Control Panel</h2>
-            <select id="profileSelect" class="profile-select">
-                <option value="">Select a profile</option>
-            </select>
-            <div>
-                <button onclick="startEmulator()" class="control-btn start-btn">Start</button>
-                <button onclick="stopEmulator()" class="control-btn stop-btn">Stop</button>
+        <div class="control-panel form-group">
+            <h2>CONTROL PANEL</h2>
+            <div class="input-group">
+                <label for="profileSelect">Select Profile:</label>
+                <select id="profileSelect" class="profile-select">
+                    <option value="">SELECT A PROFILE</option>
+                </select>
             </div>
-            <div id="status" class="status stopped">
-                Status: Stopped
+            <div class="button-group">
+                <button onclick="startEmulator()" class="start-btn">ACTIVATE</button>
+                <button onclick="stopEmulator()" class="stop">TERMINATE</button>
+            </div>
+            <div id="status" class="status-indicator status-stopped">
+                EMULATOR OFFLINE
             </div>
         </div>
     </div>
@@ -72,14 +35,61 @@
     <script>
         // 載入設定檔列表
         async function loadProfiles() {
-            const response = await fetch('/BLE/beacon-storage/profiles');
-            const profiles = await response.json();
-            const select = document.getElementById('profileSelect');
-            
-            select.innerHTML = '<option value="">Select a profile</option>';
-            profiles.forEach(profile => {
-                select.innerHTML += `<option value="${profile.name}">${profile.name}</option>`;
-            });
+            try {
+                const response = await fetch('/BLE/beacon-storage/profiles');
+                if (!response.ok) {
+                    throw new Error('Failed to load profiles');
+                }
+                const profiles = await response.json();
+                const select = document.getElementById('profileSelect');
+                
+                select.innerHTML = '<option value="">SELECT A PROFILE</option>';
+                
+                if (profiles.length === 0) {
+                    select.innerHTML += '<option value="" disabled>NO PROFILES AVAILABLE</option>';
+                } else {
+                    profiles.forEach(profile => {
+                        select.innerHTML += `<option value="${profile.name}">${profile.name}</option>`;
+                    });
+                }
+                
+                // 檢查當前狀態
+                checkStatus();
+            } catch (error) {
+                console.error('Error:', error);
+                const select = document.getElementById('profileSelect');
+                select.innerHTML = '<option value="">ERROR LOADING PROFILES</option>';
+            }
+        }
+
+        // 檢查模擬器狀態
+        async function checkStatus() {
+            try {
+                const response = await fetch('/BLE/beacon-emulator/status');
+                if (!response.ok) {
+                    throw new Error('Failed to check status');
+                }
+                
+                const data = await response.json();
+                const statusElement = document.getElementById('status');
+                
+                if (data.status === 'running') {
+                    statusElement.className = 'status-indicator status-running';
+                    statusElement.textContent = `EMULATOR ONLINE [PROFILE: ${data.profile_name}]`;
+                    document.querySelector('.start-btn').disabled = true;
+                    document.querySelector('.stop').disabled = false;
+                } else {
+                    statusElement.className = 'status-indicator status-stopped';
+                    statusElement.textContent = 'EMULATOR OFFLINE';
+                    document.querySelector('.start-btn').disabled = false;
+                    document.querySelector('.stop').disabled = false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                const statusElement = document.getElementById('status');
+                statusElement.className = 'status-indicator status-stopped';
+                statusElement.textContent = 'ERROR: CANNOT DETERMINE STATUS';
+            }
         }
 
         // 啟動模擬器
@@ -90,6 +100,13 @@
                 return;
             }
 
+            const loadingSpinner = document.createElement('span');
+            loadingSpinner.className = 'loading';
+            loadingSpinner.style.display = 'inline-block';
+            document.querySelector('.start-btn').appendChild(loadingSpinner);
+            document.querySelector('.start-btn').disabled = true;
+            document.querySelector('.stop').disabled = true;
+
             try {
                 const response = await fetch('/BLE/beacon-emulator/start', {
                     method: 'POST',
@@ -99,36 +116,69 @@
                     body: JSON.stringify({ profile_name: profileName })
                 });
                 
+                if (!response.ok) {
+                    throw new Error('Server error: ' + response.status);
+                }
+                
                 const data = await response.json();
+                const statusElement = document.getElementById('status');
+                
                 if (data.status === 'started') {
-                    document.getElementById('status').className = 'status running';
-                    document.getElementById('status').textContent = 'Status: Running';
+                    statusElement.className = 'status-indicator status-running';
+                    statusElement.textContent = `EMULATOR ONLINE [PROFILE: ${profileName}]`;
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to start emulator');
+                const statusElement = document.getElementById('status');
+                statusElement.className = 'status-indicator status-stopped';
+                statusElement.textContent = 'ERROR: FAILED TO START EMULATOR';
+            } finally {
+                loadingSpinner.remove();
+                checkStatus(); // Recheck status to update button states
             }
         }
 
         // 停止模擬器
         async function stopEmulator() {
+            const loadingSpinner = document.createElement('span');
+            loadingSpinner.className = 'loading';
+            loadingSpinner.style.display = 'inline-block';
+            document.querySelector('.stop').appendChild(loadingSpinner);
+            document.querySelector('.start-btn').disabled = true;
+            document.querySelector('.stop').disabled = true;
+
             try {
                 const response = await fetch('/BLE/beacon-emulator/stop', {
                     method: 'POST'
                 });
+                
+                if (!response.ok) {
+                    throw new Error('Server error: ' + response.status);
+                }
+                
                 const data = await response.json();
+                const statusElement = document.getElementById('status');
+                
                 if (data.status === 'stopped') {
-                    document.getElementById('status').className = 'status stopped';
-                    document.getElementById('status').textContent = 'Status: Stopped';
+                    statusElement.className = 'status-indicator status-stopped';
+                    statusElement.textContent = 'EMULATOR OFFLINE';
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to stop emulator');
+                const statusElement = document.getElementById('status');
+                statusElement.textContent = 'ERROR: FAILED TO STOP EMULATOR';
+            } finally {
+                loadingSpinner.remove();
+                checkStatus(); // Recheck status to update button states
             }
         }
 
-        // 初始載入設定檔
-        loadProfiles();
+        // 初始載入
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProfiles();
+            // 每 5 秒檢查一次狀態
+            setInterval(checkStatus, 5000);
+        });
     </script>
 </body>
 </html>
