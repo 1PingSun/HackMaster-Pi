@@ -2,8 +2,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from api import WiFi, BLE
 
-app = FastAPI()
+app = FastAPI(
+    title="HackMaster Pi",
+    description="An open source IoT Hacker Tool by using Raspberry Pi Zero W 2",
+    version="1.0.0",
+)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -16,12 +21,8 @@ def read_root(request: Request):
         {"request": request, "message": "Hello, World!"}
     )
 
-@app.get("/Wi-Fi/wordlist-generator", response_class=HTMLResponse)
-def read_wordlist_generator(request: Request):
-    return templates.TemplateResponse(
-        "Wi-Fi/wordlist-generator.html", 
-        {"request": request, "message": "Wordlist Generator"}
-    )
+app.include_router(BLE.router)
+app.include_router(WiFi.router)
 
 if __name__ == "__main__":
     import uvicorn

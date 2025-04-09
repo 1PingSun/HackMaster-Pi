@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <title>Document</title>
+    <style>
+        button {
+            background-color: #ff3a4c;
+            color: #0f0f17;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            text-transform: uppercase;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #e72e3d;
+        }
+
+        h1 {
+            color: #5a84ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-container">
+            <a href="/" class="back-button">← Back</a>
+            <h1>Airpods Emulator</h1>
+        </div>
+        <button type="submit">Start</button>
+    </div>
+</body>
+</html>
+

@@ -23,6 +23,33 @@ body {
     padding: 20px;
 }
 
+.back-button {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    background-color: transparent;
+    border: 2px solid #5a84ff;
+    color: #5a84ff;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.back-button:hover {
+    background-color: #5a84ff;
+    color: #0f0f17;
+}
+
+.header-container {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
 h1, h2 {
     color: #5a84ff;
 }

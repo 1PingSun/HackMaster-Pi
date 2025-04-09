@@ -217,8 +217,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>Password Wordlist Generator</h1>
-        
+        <div class="header-container">
+            <a href="/" class="back-button">← Back</a>
+            <h1>Password Wordlist Generator</h1>
+        </div>
         <div class="form-group">
             <p>Enter personal information to generate a targeted wordlist.</p>
             <p>Add all relevant information about the target.</p>
@@ -442,7 +444,7 @@
             };
             
             // 發送 JSON 資料到後端
-            fetch('/generate_wordlist', {
+            fetch('/WiFi/wordlist-generator', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
