@@ -66,7 +66,7 @@ def read_beacon_emulator(request: Request):
     )
 
 @router.post("/beacon-emulator/start")
-async def start_beacon_emulator():
+async def start_beacon_emulator(data: dict):
     profiles = json.loads(PROFILES_FILE.read_text())
     profile = next((p for p in profiles if p["name"] == data["profile_name"]), None)
     
