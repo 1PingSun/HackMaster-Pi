@@ -41,7 +41,7 @@ async def start_airpods_scan():
         env = os.environ.copy()
         
         # 使用 sudo -E 保留環境變數
-        cmd = ["sudo", "-E", "python3", "./mylib/apple_bleee/adv_airpods.py"]
+        cmd = ["sudo", "-E", "python3", "api/mylib/apple_bleee/adv_airpods.py"]
         
         # 啟動進程
         with open("airpods_output.log", "w") as out_file, open("airpods_error.log", "w") as err_file:
