@@ -93,53 +93,42 @@
             try {
                 const response = await fetch('/BLE/beacon-emulator/start', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({profile_name: profileName})
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ profile_name: profileName })
                 });
                 
-                if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'started') {
                     document.getElementById('status').className = 'status running';
                     document.getElementById('status').textContent = 'Status: Running';
                 }
             } catch (error) {
                 console.error('Error:', error);
+                alert('Failed to start emulator');
             }
         }
 
         // 停止模擬器
         async function stopEmulator() {
             try {
-                const response = await fetch('/BLE/beacon-emulator/stop');
-                if (response.ok) {
+                const response = await fetch('/BLE/beacon-emulator/stop', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.status === 'stopped') {
                     document.getElementById('status').className = 'status stopped';
                     document.getElementById('status').textContent = 'Status: Stopped';
                 }
             } catch (error) {
                 console.error('Error:', error);
+                alert('Failed to stop emulator');
             }
         }
 
         // 初始載入設定檔
         loadProfiles();
-
-        // 定期檢查狀態
-        setInterval(async () => {
-            try {
-                const response = await fetch('/BLE/beacon-emulator/status');
-                const status = await response.json();
-                const statusElement = document.getElementById('status');
-                
-                if (status.status === 'running') {
-                    statusElement.className = 'status running';
-                    statusElement.textContent = 'Status: Running';
-                } else {
-                    statusElement.className = 'status stopped';
-                    statusElement.textContent = 'Status: Stopped';
-                }
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }, 5000);
     </script>
 </body>
 </html>

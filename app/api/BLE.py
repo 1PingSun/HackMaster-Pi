@@ -65,7 +65,7 @@ def read_beacon_emulator(request: Request):
         {"request": request, "message": "Beacon Emulator"}
     )
 
-@router.get("/beacon-emulator/start")
+@router.post("/beacon-emulator/start")
 async def start_beacon_emulator():
     profiles = json.loads(PROFILES_FILE.read_text())
     profile = next((p for p in profiles if p["name"] == data["profile_name"]), None)
@@ -81,7 +81,7 @@ async def start_beacon_emulator():
     )
     return {"status": "started"}
 
-@router.get("/beacon-emulator/stop")
+@router.post("/beacon-emulator/stop")
 async def stop_beacon_emulator():
     beacon_emulator.stop_ibeacon()
     return {"status": "stopped"}
