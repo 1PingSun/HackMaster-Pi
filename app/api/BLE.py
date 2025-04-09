@@ -33,37 +33,28 @@ def read_airpods_emulator(request: Request):
 async def start_airpods_scan():
     global running_process
     
-    # 檢查是否已經在運行
     if running_process and running_process.poll() is None:
         return {"status": "already_running", "pid": running_process.pid}
     
     try:
-        # 使用 pkexec 或 sudo 執行腳本
-        # 注意：需要配置 sudoers 允許無密碼執行此特定腳本
-        cmd = ["sudo", "python3", "./mylib/apple_bleee/adv_airpods.py"]
-
+        # 獲取當前環境變數
         env = os.environ.copy()
         
-        # 啟動進程，不阻塞 API
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=env
-        )
-
-        try:
-            stdout, stderr = process.communicate(timeout=2)
-            if stderr:
-                raise Exception(f"Error output: {stderr}")
-        except subprocess.TimeoutExpired:
-            # 如果程序正常運行，這是預期的超時
-            pass
+        # 使用 sudo -E 保留環境變數
+        cmd = ["sudo", "-E", "python3", "./mylib/apple_bleee/adv_airpods.py"]
         
-        # 儲存進程引用
+        # 啟動進程
+        with open("airpods_output.log", "w") as out_file, open("airpods_error.log", "w") as err_file:
+            process = subprocess.Popen(
+                cmd,
+                stdout=out_file,
+                stderr=err_file,
+                text=True,
+                env=env,
+                preexec_fn=os.setsid
+            )
+        
         running_process = process
-        
         return {"status": "started", "pid": process.pid}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to start: {str(e)}")
@@ -107,3 +98,21 @@ async def get_status():
         return {"status": "running", "pid": running_process.pid}
     else:
         return {"status": "not_running"}
+    
+@router.get("/airpods-emulator/logs")
+async def get_logs():
+    try:
+        error_content = ""
+        output_content = ""
+        
+        if os.path.exists("airpods_error.log"):
+            with open("airpods_error.log", "r") as error_file:
+                error_content = error_file.read()
+                
+        if os.path.exists("airpods_output.log"):
+            with open("airpods_output.log", "r") as output_file:
+                output_content = output_file.read()
+                
+        return {"output": output_content, "errors": error_content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read logs: {str(e)}")
