@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Beacon Storage</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <style>
+        .profile-form {
+            margin: 20px;
+            padding: 20px;
+            background: #1a1a24;
+            border-radius: 8px;
+        }
+        .profile-list {
+            margin: 20px;
+        }
+        .profile-item {
+            background: #1a1a24;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .delete-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        input[type="text"] {
+            background: #2a2a34;
+            border: 1px solid #3a3a44;
+            color: white;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        button[type="submit"] {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Beacon Storage</h1>
+        
+        <div class="profile-form">
+            <h2>Add New Profile</h2>
+            <form id="profileForm">
+                <div>
+                    <label for="name">Profile Name:</label><br>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div>
+                    <label for="uuid">UUID (e.g. AA 21 98 B2 46 30 11 EE BE 56 02 42 AC 12 00 02):</label><br>
+                    <input type="text" id="uuid" name="uuid" required>
+                </div>
+                <div>
+                    <label for="major">Major (e.g. 00 01):</label><br>
+                    <input type="text" id="major" name="major" required>
+                </div>
+                <div>
+                    <label for="minor">Minor (e.g. 00 02):</label><br>
+                    <input type="text" id="minor" name="minor" required>
+                </div>
+                <div>
+                    <label for="power">Power (e.g. C8):</label><br>
+                    <input type="text" id="power" name="power" required>
+                </div>
+                <button type="submit">Add Profile</button>
+            </form>
+        </div>
+
+        <div class="profile-list" id="profileList">
+            <h2>Saved Profiles</h2>
+            <!-- Profiles will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        // 載入設定檔
+        async function loadProfiles() {
+            const response = await fetch('/BLE/beacon-storage/profiles');
+            const profiles = await response.json();
+            const profileList = document.getElementById('profileList');
+            
+            let html = '<h2>Saved Profiles</h2>';
+            profiles.forEach(profile => {
+                html += `
+                    <div class="profile-item">
+                        <div>
+                            <strong>${profile.name}</strong><br>
+                            UUID: ${profile.uuid}<br>
+                            Major: ${profile.major}, Minor: ${profile.minor}, Power: ${profile.power}
+                        </div>
+                        <button class="delete-btn" onclick="deleteProfile('${profile.name}')">Delete</button>
+                    </div>
+                `;
+            });
+            profileList.innerHTML = html;
+        }
+
+        // 新增設定檔
+        document.getElementById('profileForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const profile = Object.fromEntries(formData);
+            
+            try {
+                const response = await fetch('/BLE/beacon-storage/profiles', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(profile)
+                });
+                
+                if (response.ok) {
+                    e.target.reset();
+                    loadProfiles();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        };
+
+        // 刪除設定檔
+        async function deleteProfile(name) {
+            try {
+                const response = await fetch(`/BLE/beacon-storage/profiles/${name}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadProfiles();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // 初始載入
+        loadProfiles();
+    </script>
+</body>
+</html>

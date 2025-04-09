@@ -6,6 +6,15 @@ import os
 import signal
 import psutil
 from .mylib.beacon import beacon_emulator
+import json
+from pathlib import Path
+
+PROFILES_FILE = Path("data/beacon_profiles.json")
+PROFILES_FILE.parent.mkdir(exist_ok=True)
+
+# 確保設定檔檔案存在
+if not PROFILES_FILE.exists():
+    PROFILES_FILE.write_text("[]")
 
 router = APIRouter(
     prefix="/BLE",
@@ -23,6 +32,32 @@ def read_airpods_emulator(request: Request):
         {"request": request, "message": "Beacon Scanner"}
     )
 
+@router.get("/beacon-storage", response_class=HTMLResponse)
+def read_beacon_storage(request: Request):
+    return templates.TemplateResponse(
+        "BLE/beacon-storage.html",
+        {"request": request, "message": "Beacon Storage"}
+    )
+
+@router.get("/beacon-storage/profiles")
+def get_profiles():
+    profiles = json.loads(PROFILES_FILE.read_text())
+    return profiles
+
+@router.post("/beacon-storage/profiles")
+async def add_profile(profile: dict):
+    profiles = json.loads(PROFILES_FILE.read_text())
+    profiles.append(profile)
+    PROFILES_FILE.write_text(json.dumps(profiles, indent=2))
+    return {"status": "success"}
+
+@router.delete("/beacon-storage/profiles/{name}")
+async def delete_profile(name: str):
+    profiles = json.loads(PROFILES_FILE.read_text())
+    profiles = [p for p in profiles if p["name"] != name]
+    PROFILES_FILE.write_text(json.dumps(profiles, indent=2))
+    return {"status": "success"}
+
 @router.get("/beacon-emulator", response_class=HTMLResponse)
 def read_beacon_emulator(request: Request):
     return templates.TemplateResponse(
@@ -32,7 +67,18 @@ def read_beacon_emulator(request: Request):
 
 @router.get("/beacon-emulator/start")
 async def start_beacon_emulator():
-    beacon_emulator.start_ibeacon()
+    profiles = json.loads(PROFILES_FILE.read_text())
+    profile = next((p for p in profiles if p["name"] == data["profile_name"]), None)
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    beacon_emulator.start_ibeacon(
+        uuid=profile["uuid"],
+        major=profile["major"],
+        minor=profile["minor"],
+        power=profile["power"]
+    )
     return {"status": "started"}
 
 @router.get("/beacon-emulator/stop")
