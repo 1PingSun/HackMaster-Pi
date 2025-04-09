@@ -40,15 +40,26 @@ async def start_airpods_scan():
     try:
         # 使用 pkexec 或 sudo 執行腳本
         # 注意：需要配置 sudoers 允許無密碼執行此特定腳本
-        cmd = ["sudo", "python3", "./apple_bleee/adv_airpods.py"]
+        cmd = ["sudo", "python3", "./mylib/apple_bleee/adv_airpods.py"]
+
+        env = os.environ.copy()
         
         # 啟動進程，不阻塞 API
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True
+            text=True,
+            env=env
         )
+
+        try:
+            stdout, stderr = process.communicate(timeout=2)
+            if stderr:
+                raise Exception(f"Error output: {stderr}")
+        except subprocess.TimeoutExpired:
+            # 如果程序正常運行，這是預期的超時
+            pass
         
         # 儲存進程引用
         running_process = process
