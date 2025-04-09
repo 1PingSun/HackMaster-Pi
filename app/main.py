@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from api import WiFi, BLE
+import os
 
 app = FastAPI(
     title="HackMaster Pi",
@@ -20,6 +21,11 @@ def read_root(request: Request):
         "index.html", 
         {"request": request}
     )
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    favicon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "favicon.ico")
+    return FileResponse(favicon_path)
 
 app.include_router(BLE.router)
 app.include_router(WiFi.router)
