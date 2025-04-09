@@ -18,7 +18,7 @@ templates = Jinja2Templates(directory="templates")
 def read_root(request: Request):
     return templates.TemplateResponse(
         "index.html", 
-        {"request": request, "message": "Hello, World!"}
+        {"request": request}
     )
 
 app.include_router(BLE.router)

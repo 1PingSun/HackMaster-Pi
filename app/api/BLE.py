@@ -22,6 +22,36 @@ def read_airpods_emulator(request: Request):
         {"request": request, "message": "Beacon Scanner"}
     )
 
+@router.get("/beacon-scanner/scan")
+async def start_beacon_scan():
+    global running_process
+    
+    if running_process and running_process.poll() is None:
+        return {"status": "already_running", "pid": running_process.pid}
+    
+    try:
+        # 獲取當前環境變數
+        env = os.environ.copy()
+        
+        # 使用 sudo -E 保留環境變數
+        cmd = ["sudo", "-E", "python3", "api/mylib/beacon/beacon_scanner.py"]
+        
+        # 啟動進程
+        with open("beacon_output.log", "w") as out_file, open("beacon_error.log", "w") as err_file:
+            process = subprocess.Popen(
+                cmd,
+                stdout=out_file,
+                stderr=err_file,
+                text=True,
+                env=env,
+                preexec_fn=os.setsid
+            )
+        
+        running_process = process
+        return {"status": "started", "pid": process.pid}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start: {str(e)}")
+
 @router.get("/airpods-emulator", response_class=HTMLResponse)
 def read_airpods_emulator(request: Request):
     return templates.TemplateResponse(
