@@ -4,6 +4,8 @@
   <img alt="Logo" src="icon/Wide/PNG-Light.png" />
 </picture>
 
+<br/>
+
 [![License GPL](https://img.shields.io/badge/license-GPL-blue.svg)](https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/refs/heads/main/LICENSE)
 
 HackMaster Pi is an open-source IoT security testing tool based on the Raspberry Pi Zero 2 W, designed for IoT security learning. With its cost-effective features, it combines Bluetooth, Wi-Fi, infrared, RFID, and USB functionalities, allowing users to learn about IoT device attack and defense knowledge on a budget.
