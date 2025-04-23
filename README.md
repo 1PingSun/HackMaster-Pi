@@ -6,8 +6,6 @@
   <img alt="Logo" src="icon/Wide/PNG-Light.png" />
 </picture>
 
-## About HackMaster Pi
-
 HackMaster Pi is an open-source IoT security testing tool based on the Raspberry Pi Zero 2 W, designed for IoT security learning. With its cost-effective features, it combines Bluetooth, Wi-Fi, infrared, RFID, and USB functionalities, allowing users to learn about IoT device attack and defense knowledge on a budget.
 
 If you have any suggestions for improvements or find any bugs, feel free to fork the repository and submit a pull request. We appreciate your contributions!
@@ -16,7 +14,7 @@ If you find this project useful, please give it a star on GitHub. Your support i
 
 ## Installation and Usage
 
-Read tutorial here: [https://hackmasterpi.org](https://hackmasterpi.org).
+To install and use HackMaster Pi, please read the tutorial here: [https://hackmasterpi.org](https://hackmasterpi.org)
 
 ## Components List
 
