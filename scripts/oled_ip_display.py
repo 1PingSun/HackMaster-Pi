@@ -26,14 +26,14 @@ global_device = None
 # 使用系統字體
 try:
     # 嘗試加載較大的字體 (18pt)
-    font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 18)
-    font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 12)
+    font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 14)
+    font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 14)
     logger.info("已加載自定義字體")
 except IOError:
     try:
         # 嘗試加載另一種常見字體
-        font_large = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeMono.ttf", 18)
-        font_small = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeMono.ttf", 12)
+        font_large = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeMono.ttf", 14)
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeMono.ttf", 14)
         logger.info("已加載 FreeMono 字體")
     except IOError:
         # 如果無法加載字體，使用默認字體
