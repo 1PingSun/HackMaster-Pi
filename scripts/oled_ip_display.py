@@ -15,7 +15,7 @@ from PIL import ImageFont  # 導入 PIL 字體模組
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.FileHandler("/tmp/oled_display.log"), logging.StreamHandler()]
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger("OLED_IP_Display")
 
