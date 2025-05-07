@@ -1,7 +1,14 @@
 [
   {
+    "name": "tschool jieluo",
+    "uuid": "66 FB 24 24 20 71 4A 17 B0 91 95 30 BB 29 B6 25",
+    "major": "00 01",
+    "minor": "00 02",
+    "power": "C8"
+  },
+  {
     "name": "tschool jilin",
-    "uuid": "AA 21 98 B2 46 30 11 EE BE 56 02 42 AC 12 00 02",
+    "uuid": "F0 6D 1C 3B 99 DE 40 68 9A E2 00 67 F9 6D BC 28",
     "major": "00 01",
     "minor": "00 02",
     "power": "C8"

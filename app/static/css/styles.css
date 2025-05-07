@@ -837,3 +837,35 @@ button:disabled {
     cursor: not-allowed;
     box-shadow: none;
 }
+
+textarea {
+    width: 100%;
+    padding: 10px;
+    background-color: #1e1e2f;
+    border: 1px solid #323259;
+    color: #c7d3e3;
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+    resize: vertical;
+}
+
+textarea:focus {
+    border-color: #5a84ff;
+    box-shadow: 0 0 10px rgba(90, 132, 255, 0.3);
+    outline: none;
+}
+
+.write-mode-panel {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #1e1e2f;
+    border-radius: 10px;
+    border: 1px solid #323259;
+}
+
+.error-message {
+    color: #ff3a4c;
+    font-weight: bold;
+}

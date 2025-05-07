@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <title>RFID Learner - HackMaster Pi</title>
+    <meta name="theme-color" content="#0f0f17">
+</head>
+<body>
+    <div class="container">
+        <div class="header-container">
+            <a href="/" class="back-button">← BACK</a>
+            <h1>RFID Learner</h1>
+        </div>
+        
+        <div class="info-guide">
+            <h3>RFID Learning Tool</h3>
+            <p>This tool allows you to scan RFID cards and store their information for later use. Scan a card, add a name or description, and save it to your collection.</p>
+        </div>
+        
+        <button id="control-button" type="button">
+            <span id="button-text">SCAN CARD</span>
+            <span class="loading" id="loading-spinner" style="display: none;"></span>
+        </button>
+        <div class="status-indicator" id="status-indicator">READY TO SCAN</div>
+        
+        <div id="card-info" style="display: none;">
+            <h2>Card Information</h2>
+            <div class="profile-item">
+                <div class="profile-details">
+                    <div class="profile-info">
+                        <span class="profile-label">UID:</span>
+                        <span class="profile-value" id="card-uid">-</span>
+                        <button class="copy-btn" data-copy="card-uid">COPY</button>
+                    </div>
+                    <div class="profile-info">
+                        <span class="profile-label">TYPE:</span>
+                        <span class="profile-value" id="card-type">-</span>
+                    </div>
+                    <div class="profile-info">
+                        <span class="profile-label">DATA:</span>
+                        <span class="profile-value" id="card-data">-</span>
+                    </div>
+                    <div class="profile-info">
+                        <span class="profile-label">SCAN TIME:</span>
+                        <span class="profile-value" id="scan-time">-</span>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label for="card-name">CARD NAME/DESCRIPTION:</label>
+                        <input type="text" id="card-name" placeholder="Enter a name or description for this card">
+                    </div>
+                    
+                    <div class="button-group">
+                        <button id="save-button" class="start-btn">SAVE TO COLLECTION</button>
+                        <button id="export-button" class="download-link">EXPORT ALL AS JSON</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="saved-cards" style="margin-top: 30px;">
+            <h2>Saved Cards</h2>
+            <div id="cards-list" class="profile-list">
+                <div class="no-profiles" id="no-cards-message">No cards saved yet</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const controlButton = document.getElementById('control-button');
+            const buttonText = document.getElementById('button-text');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const statusIndicator = document.getElementById('status-indicator');
+            const cardInfo = document.getElementById('card-info');
+            const cardUid = document.getElementById('card-uid');
+            const cardType = document.getElementById('card-type');
+            const cardData = document.getElementById('card-data');
+            const scanTime = document.getElementById('scan-time');
+            const cardName = document.getElementById('card-name');
+            const saveButton = document.getElementById('save-button');
+            const exportButton = document.getElementById('export-button');
+            const cardsList = document.getElementById('cards-list');
+            const noCardsMessage = document.getElementById('no-cards-message');
+            
+            // 儲存卡片集合
+            let cardCollection = [];
+            
+            // 嘗試從 localStorage 加載已儲存的卡片
+            try {
+                const savedCards = localStorage.getItem('rfidCards');
+                if (savedCards) {
+                    cardCollection = JSON.parse(savedCards);
+                    updateCardsList();
+                }
+            } catch (e) {
+                console.error('Error loading saved cards:', e);
+            }
+            
+            // 複製按鈕功能
+            document.querySelectorAll('.copy-btn').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('data-copy');
+                    const textToCopy = document.getElementById(targetId).textContent;
+                    
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const originalText = this.textContent;
+                        this.textContent = 'COPIED!';
+                        setTimeout(() => {
+                            this.textContent = originalText;
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+                });
+            });
+            
+            // 按鈕點擊事件 - 掃描卡片
+            controlButton.addEventListener('click', function() {
+                // 顯示loading狀態
+                controlButton.disabled = true;
+                loadingSpinner.style.display = 'inline-block';
+                buttonText.textContent = 'SCANNING...';
+                statusIndicator.textContent = 'PLACE YOUR RFID CARD NEAR THE READER';
+                statusIndicator.className = 'status-indicator status-running';
+                cardInfo.style.display = 'none';
+                
+                // 發送讀卡請求
+                fetch('/RFID/read', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Read card data:', data);
+                    // 更新卡片信息
+                    cardUid.textContent = data.uid || 'N/A';
+                    cardType.textContent = data.type || 'Unknown';
+                    cardData.textContent = data.data || 'No data available';
+                    scanTime.textContent = new Date().toLocaleString();
+                    cardName.value = ''; // 清空名稱輸入框
+                    
+                    // 顯示卡片信息區塊
+                    cardInfo.style.display = 'block';
+                    
+                    // 更新狀態
+                    statusIndicator.textContent = 'CARD READ SUCCESSFULLY';
+                    statusIndicator.className = 'status-indicator status-running';
+                })
+                .catch(error => {
+                    console.error('Error reading card:', error);
+                    statusIndicator.textContent = 'ERROR: FAILED TO READ CARD';
+                    statusIndicator.className = 'status-indicator status-stopped';
+                })
+                .finally(() => {
+                    // 重置按鈕狀態
+                    loadingSpinner.style.display = 'none';
+                    buttonText.textContent = 'SCAN AGAIN';
+                    controlButton.disabled = false;
+                });
+            });
+            
+            // 儲存卡片按鈕
+            saveButton.addEventListener('click', function() {
+                const uid = cardUid.textContent;
+                const type = cardType.textContent;
+                const data = cardData.textContent;
+                const time = scanTime.textContent;
+                const name = cardName.value.trim() || 'Unnamed Card';
+                
+                if (uid === '-' || uid === 'N/A') {
+                    statusIndicator.textContent = 'ERROR: NO CARD DATA TO SAVE';
+                    statusIndicator.className = 'status-indicator status-stopped';
+                    return;
+                }
+                
+                // 創建卡片對象
+                const cardObject = {
+                    name: name,
+                    uid: uid,
+                    type: type,
+                    data: data,
+                    scanTime: time,
+                    timestamp: new Date().getTime()
+                };
+                
+                // 檢查是否存在相同 UID 的卡片
+                const existingIndex = cardCollection.findIndex(card => card.uid === uid);
+                if (existingIndex !== -1) {
+                    // 更新已存在的卡片
+                    cardCollection[existingIndex] = cardObject;
+                    statusIndicator.textContent = 'CARD UPDATED IN COLLECTION';
+                } else {
+                    // 添加新卡片
+                    cardCollection.push(cardObject);
+                    statusIndicator.textContent = 'CARD ADDED TO COLLECTION';
+                }
+                
+                // 儲存到 localStorage
+                localStorage.setItem('rfidCards', JSON.stringify(cardCollection));
+                
+                // 更新卡片列表
+                updateCardsList();
+                
+                // 更新狀態
+                statusIndicator.className = 'status-indicator status-running';
+            });
+            
+            // 匯出 JSON 按鈕
+            exportButton.addEventListener('click', function() {
+                if (cardCollection.length === 0) {
+                    statusIndicator.textContent = 'ERROR: NO CARDS TO EXPORT';
+                    statusIndicator.className = 'status-indicator status-stopped';
+                    return;
+                }
+                
+                // 發送儲存請求到伺服器
+                fetch('/RFID/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        cards: cardCollection,
+                        filename: 'rfid_cards_' + new Date().getTime()
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Save response:', data);
+                    if (data.success) {
+                        statusIndicator.textContent = `CARDS EXPORTED: ${data.filename}`;
+                        statusIndicator.className = 'status-indicator status-running';
+                        
+                        // 創建下載連結
+                        if (data.download_url) {
+                            // 開始下載
+                            window.location.href = data.download_url;
+                        }
+                    } else {
+                        throw new Error(data.message || 'Failed to export cards');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error exporting cards:', error);
+                    statusIndicator.textContent = 'ERROR: FAILED TO EXPORT CARDS';
+                    statusIndicator.className = 'status-indicator status-stopped';
+                });
+            });
+            
+            // 更新卡片列表顯示
+            function updateCardsList() {
+                // 清空列表
+                while (cardsList.firstChild) {
+                    cardsList.removeChild(cardsList.firstChild);
+                }
+                
+                // 檢查是否有卡片
+                if (cardCollection.length === 0) {
+                    cardsList.appendChild(noCardsMessage);
+                    return;
+                }
+                
+                // 添加所有卡片
+                cardCollection.forEach((card, index) => {
+                    const cardElement = document.createElement('div');
+                    cardElement.className = 'profile-item';
+                    
+                    cardElement.innerHTML = `
+                        <div class="profile-details">
+                            <div class="profile-name">${card.name}</div>
+                            <div class="profile-info">
+                                <span class="profile-label">UID:</span>
+                                <span class="profile-value">${card.uid}</span>
+                            </div>
+                            <div class="profile-info">
+                                <span class="profile-label">TYPE:</span>
+                                <span class="profile-value">${card.type}</span>
+                            </div>
+                            <div class="profile-info">
+                                <span class="profile-label">SCAN TIME:</span>
+                                <span class="profile-value">${card.scanTime}</span>
+                            </div>
+                        </div>
+                        <button class="delete-btn" data-index="${index}">DELETE</button>
+                    `;
+                    
+                    cardsList.appendChild(cardElement);
+                });
+                
+                // 添加刪除事件
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        cardCollection.splice(index, 1);
+                        localStorage.setItem('rfidCards', JSON.stringify(cardCollection));
+                        updateCardsList();
+                        
+                        statusIndicator.textContent = 'CARD REMOVED FROM COLLECTION';
+                        statusIndicator.className = 'status-indicator status-running';
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>
