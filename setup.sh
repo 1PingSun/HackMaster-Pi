@@ -9,8 +9,8 @@ fi
 # ==== for ip show====
 sudo ./scripts/enable_i2c.sh
 sudo apt-get install -y python3-pip python3-dev python3-smbus i2c-tools
-sudo pip3 install netifaces
-sudo pip3 install luma.oled
+sudo pip3 install --break-system-packages netifaces
+sudo pip3 install --break-system-packages luma.oled
 cd ./scripts
 sudo chmod +x setup_ip_show.sh
 sudo ./setup_ip_show.sh
@@ -37,7 +37,7 @@ newgrp i2c
 echo "pi ALL=(ALL) NOPASSWD: /usr/bin/python3 ./app/mylib/apple_bleee/adv_airpods.py" | sudo tee /etc/sudoers.d/user-python && sudo chmod 440 /etc/sudoers.d/user-python
 sudo apt install -y bluez libpcap-dev libev-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev cmake libbluetooth-dev
 sudo apt install git
-sudo pip3 install -r ./app/mylib/apple_bleeerequirements.txt
+sudo pip3 install --break-system-packages -r ./app/mylib/apple_bleeerequirements.txt
 git clone https://github.com/seemoo-lab/owl.git && cd ./owl && git submodule update --init && mkdir build && cd build && cmake .. && make && sudo make install && cd ../..
 
 # ==== for beacon ====

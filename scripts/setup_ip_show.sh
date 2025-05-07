@@ -23,7 +23,7 @@ apt-get install -y python3-pip python3-pil python3-netifaces
 
 # 安裝 luma.oled 套件
 echo "安裝 luma.oled..."
-pip3 install luma.core luma.oled
+pip3 install --break-system-packages luma.core luma.oled
 
 # 將 Python 腳本複製到系統目錄
 echo "複製 Python 腳本到 /usr/local/bin..."
