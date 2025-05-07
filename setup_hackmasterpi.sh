@@ -44,7 +44,7 @@ if [ ! -d "$ENV_DIR" ]; then
     fi
 fi
 
-sudo apt-get install python3-bluez
+sudo apt-get install -y python3-bluez
 ${ENV_DIR}/bin/pip3 install -r ${APP_DIR}/requirements.txt
 
 # 檢查 main.py 是否存在
