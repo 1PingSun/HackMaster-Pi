@@ -65,8 +65,14 @@ def read_beacon_emulator(request: Request):
         {"request": request, "message": "Beacon Emulator"}
     )
 
+# 在文件頂部的 import 部分之後添加一個變量來跟踪 beacon 模擬器的狀態
+beacon_emulator_active = False
+
+# 修改 start_beacon_emulator 函數來設置狀態標誌
 @router.post("/beacon-emulator/start")
 async def start_beacon_emulator(data: dict):
+    global beacon_emulator_active
+    
     profiles = json.loads(PROFILES_FILE.read_text())
     profile = next((p for p in profiles if p["name"] == data["profile_name"]), None)
     
@@ -79,12 +85,33 @@ async def start_beacon_emulator(data: dict):
         minor=profile["minor"],
         power=profile["power"]
     )
-    return {"status": "started"}
+    
+    # 設置 beacon 模擬器狀態為活動
+    beacon_emulator_active = True
+    
+    return {"status": "started", "profile": profile["name"]}
 
+# 修改 stop_beacon_emulator 函數來更新狀態標誌
 @router.post("/beacon-emulator/stop")
 async def stop_beacon_emulator():
+    global beacon_emulator_active
+    
     beacon_emulator.stop_ibeacon()
+    
+    # 設置 beacon 模擬器狀態為停止
+    beacon_emulator_active = False
+    
     return {"status": "stopped"}
+
+# 添加新的狀態檢查路由
+@router.get("/beacon-emulator/status")
+async def get_beacon_emulator_status():
+    global beacon_emulator_active
+    
+    if beacon_emulator_active:
+        return {"status": "running"}
+    else:
+        return {"status": "not_running"}
 
 @router.get("/airpods-emulator", response_class=HTMLResponse)
 def read_airpods_emulator(request: Request):

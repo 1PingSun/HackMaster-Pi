@@ -15,6 +15,7 @@ cd ./scripts
 sudo chmod +x setup_ip_show.sh
 sudo ./setup_ip_show.sh
 cd ..
+sudo ./setup_hackmasterpi.sh
 
 # ==== for PN532 ====
 # sudo ./scripts/enable_i2c.sh

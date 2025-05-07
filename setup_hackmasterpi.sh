@@ -15,8 +15,8 @@ success() {
 
 # 獲取絕對路徑
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-APP_DIR="$SCRIPT_DIR/../app"
-ENV_DIR="$SCRIPT_DIR/../app/env"
+APP_DIR="$SCRIPT_DIR/app"
+ENV_DIR="$SCRIPT_DIR/app/env"
 
 # 檢查是否為 root 用戶
 if [ "$EUID" -ne 0 ]; then
@@ -43,6 +43,9 @@ if [ ! -d "$ENV_DIR" ]; then
         success "虛擬環境創建成功"
     fi
 fi
+
+sudo apt-get install python3-bluez
+${ENV_DIR}/bin/pip3 install -r ${APP_DIR}/requirements.txt
 
 # 檢查 main.py 是否存在
 if [ ! -f "$APP_DIR/main.py" ]; then
