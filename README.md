@@ -36,7 +36,7 @@ To install and use HackMaster Pi, please read the tutorial here: [https://hackma
 
 ## Contributors
 
-**Thanks to all the contributors for making this project even greater!**
+Thanks to all the contributors for making this project even greater!
 
 <a href="https://github.com/1PingSun/HackMaster-Pi/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=1PingSun/HackMaster-Pi" />
