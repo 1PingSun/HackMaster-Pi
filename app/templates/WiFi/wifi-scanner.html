@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <title>Wi-Fi Scanner - HackMaster Pi</title>
+    <meta name="theme-color" content="#0f0f17">
+</head>
+<body>
+    <div class="container">
+        <div class="header-container">
+            <a href="/" class="back-button">← BACK</a>
+            <h1>Wi-Fi Scanner</h1>
+        </div>
+        
+        <div class="info-guide">
+            <h3>Wi-Fi Network Scanner</h3>
+            <p>This tool scans for nearby Wi-Fi networks and displays detailed information about them, including signal strength, security settings, frequency, and more.</p>
+            <p><strong>Note:</strong> Scanning for networks may take a few seconds to complete. Nearby networks will be automatically sorted by signal strength.</p>
+        </div>
+        
+        <div class="scan-options">
+            <div class="scan-option">
+                <input type="checkbox" id="scan-2g" checked>
+                <label for="scan-2g">2.4 GHz</label>
+            </div>
+            <div class="scan-option">
+                <input type="checkbox" id="scan-5g" checked>
+                <label for="scan-5g">5 GHz</label>
+            </div>
+            <div class="scan-option">
+                <input type="checkbox" id="scan-6g">
+                <label for="scan-6g">6 GHz</label>
+            </div>
+            <div class="scan-option">
+                <input type="checkbox" id="show-hidden">
+                <label for="show-hidden">Show Hidden Networks</label>
+            </div>
+        </div>
+        
+        <div class="controls-container">
+            <button id="scan-button" class="start-btn">
+                <span id="scan-button-text">SCAN NETWORKS</span>
+                <span class="loading" id="scan-spinner" style="display: none;"></span>
+            </button>
+            <div class="counter" id="networks-count">0 NETWORKS</div>
+        </div>
+        
+        <div class="status-indicator" id="scan-status">READY TO SCAN</div>
+        
+        <div id="scan-summary" class="scan-summary" style="display: none;">
+            <h3>Scan Summary</h3>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-value" id="total-networks">0</div>
+                    <div class="summary-label">TOTAL NETWORKS</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="open-networks">0</div>
+                    <div class="summary-label">OPEN NETWORKS</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="2g-networks">0</div>
+                    <div class="summary-label">2.4 GHz NETWORKS</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="5g-networks">0</div>
+                    <div class="summary-label">5 GHz NETWORKS</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="networks-container" id="networks-container">
+            <!-- Networks will be listed here -->
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const scanButton = document.getElementById('scan-button');
+            const scanButtonText = document.getElementById('scan-button-text');
+            const scanSpinner = document.getElementById('scan-spinner');
+            const scanStatus = document.getElementById('scan-status');
+            const networksContainer = document.getElementById('networks-container');
+            const networksCount = document.getElementById('networks-count');
+            const scanSummary = document.getElementById('scan-summary');
+            const totalNetworks = document.getElementById('total-networks');
+            const openNetworks = document.getElementById('open-networks');
+            const networks2g = document.getElementById('2g-networks');
+            const networks5g = document.getElementById('5g-networks');
+            const scan2g = document.getElementById('scan-2g');
+            const scan5g = document.getElementById('scan-5g');
+            const scan6g = document.getElementById('scan-6g');
+            const showHidden = document.getElementById('show-hidden');
+            
+            // 狀態變數
+            let isScanning = false;
+            let scanResults = [];
+            
+            // 掃描按鈕點擊事件
+            scanButton.addEventListener('click', function() {
+                if (isScanning) return;
+                
+                // 檢查至少選擇一個頻段
+                if (!scan2g.checked && !scan5g.checked && !scan6g.checked) {
+                    scanStatus.textContent = 'ERROR: PLEASE SELECT AT LEAST ONE FREQUENCY BAND';
+                    scanStatus.className = 'status-indicator status-stopped';
+                    return;
+                }
+                
+                startScan();
+            });
+            
+            // 開始掃描
+            function startScan() {
+                // 更新 UI 狀態
+                isScanning = true;
+                scanButtonText.textContent = 'SCANNING...';
+                scanSpinner.style.display = 'inline-block';
+                scanButton.disabled = true;
+                scanStatus.textContent = 'SCANNING FOR NETWORKS...';
+                scanStatus.className = 'status-indicator status-running';
+                networksContainer.innerHTML = '';
+                scanSummary.style.display = 'none';
+                
+                // 準備掃描設定
+                const scanConfig = {
+                    bands: {
+                        '2.4GHz': scan2g.checked,
+                        '5GHz': scan5g.checked,
+                        '6GHz': scan6g.checked
+                    },
+                    show_hidden: showHidden.checked
+                };
+                
+                // 發送掃描請求
+                fetch('/WiFi/scan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(scanConfig)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 儲存並處理掃描結果
+                        scanResults = data.networks || [];
+                        displayNetworks(scanResults);
+                        updateScanSummary(scanResults);
+                    } else {
+                        throw new Error(data.message || 'Scan failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error scanning networks:', error);
+                    scanStatus.textContent = 'ERROR: ' + error.message.toUpperCase();
+                    scanStatus.className = 'status-indicator status-stopped';
+                })
+                .finally(() => {
+                    // 重置 UI 狀態
+                    isScanning = false;
+                    scanButtonText.textContent = 'SCAN NETWORKS';
+                    scanSpinner.style.display = 'none';
+                    scanButton.disabled = false;
+                });
+            }
+            
+            // 顯示網路列表
+            function displayNetworks(networks) {
+                // 清空容器
+                networksContainer.innerHTML = '';
+                
+                // 更新計數
+                networksCount.textContent = networks.length + ' NETWORKS';
+                
+                // 如果沒有找到網路
+                if (networks.length === 0) {
+                    scanStatus.textContent = 'NO NETWORKS FOUND';
+                    networksContainer.innerHTML = '<div class="no-profiles">No networks found in range</div>';
+                    return;
+                }
+                
+                // 更新狀態
+                scanStatus.textContent = `SCAN COMPLETE: FOUND ${networks.length} NETWORKS`;
+                
+                // 顯示每個網路
+                networks.forEach((network, index) => {
+                    // 創建網路卡片
+                    const networkElement = document.createElement('div');
+                    networkElement.className = 'network-item';
+                    
+                    // 根據安全類型添加顏色
+                    if (network.security.includes('WPA3')) {
+                        networkElement.classList.add('security-wpa3');
+                    } else if (network.security.includes('WPA2')) {
+                        networkElement.classList.add('security-wpa2');
+                    } else if (network.security.includes('WPA')) {
+                        networkElement.classList.add('security-wpa');
+                    } else if (network.security.includes('WEP')) {
+                        networkElement.classList.add('security-wep');
+                    } else {
+                        networkElement.classList.add('security-open');
+                    }
+                    
+                    // 計算信號強度百分比
+                    const signalPercent = Math.min(100, Math.max(0, (network.signal_strength + 100) * 1.1));
+                    
+                    // 確定頻段標籤
+                    let bandClass = 'band-2g';
+                    if (network.frequency >= 5000 && network.frequency < 6000) {
+                        bandClass = 'band-5g';
+                    } else if (network.frequency >= 6000) {
+                        bandClass = 'band-6g';
+                    }
+                    
+                    // 頻段顯示文字
+                    let bandText = '2.4 GHz';
+                    if (network.frequency >= 5000 && network.frequency < 6000) {
+                        bandText = '5 GHz';
+                    } else if (network.frequency >= 6000) {
+                        bandText = '6 GHz';
+                    }
+                    
+                    // 生成 SSID 顯示
+                    let ssidDisplay = network.ssid;
+                    if (!network.ssid || network.ssid === '<hidden>') {
+                        ssidDisplay = '<span class="hidden-ssid">Hidden Network</span>';
+                    }
+                    
+                    // 設置網路卡片內容
+                    networkElement.innerHTML = `
+                        <div class="network-header">
+                            <div class="network-name">
+                                <span class="band-indicator ${bandClass}">${bandText}</span>
+                                ${ssidDisplay}
+                            </div>
+                            <div class="network-signal">
+                                ${network.signal_strength} dBm
+                                <div class="signal-strength">
+                                    <div class="signal-bar" style="width: ${signalPercent}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="network-details">
+                            <div class="network-detail">
+                                <span class="detail-label">SECURITY</span>
+                                <span class="detail-value">${network.security || 'Open'}</span>
+                            </div>
+                            <div class="network-detail">
+                                <span class="detail-label">CHANNEL</span>
+                                <span class="detail-value">${network.channel || 'N/A'}</span>
+                            </div>
+                            <div class="network-detail">
+                                <span class="detail-label">FREQUENCY</span>
+                                <span class="detail-value">${network.frequency ? network.frequency + ' MHz' : 'N/A'}</span>
+                            </div>
+                            <div class="network-detail">
+                                <span class="detail-label">MAC ADDRESS</span>
+                                <span class="detail-value">${network.bssid || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <button class="toggle-details" data-index="${index}">SHOW ADVANCED DETAILS</button>
+                        <div class="advanced-details" id="details-${index}">
+                            <div class="network-details">
+                                <div class="network-detail">
+                                    <span class="detail-label">VENDOR</span>
+                                    <span class="detail-value">${network.vendor || 'Unknown'}</span>
+                                </div>
+                                <div class="network-detail">
+                                    <span class="detail-label">WIDTH</span>
+                                    <span class="detail-value">${network.width ? network.width + ' MHz' : 'N/A'}</span>
+                                </div>
+                                <div class="network-detail">
+                                    <span class="detail-label">FIRST SEEN</span>
+                                    <span class="detail-value">${network.first_seen || 'Just now'}</span>
+                                </div>
+                                <div class="network-detail">
+                                    <span class="detail-label">LAST SEEN</span>
+                                    <span class="detail-value">${network.last_seen || 'Just now'}</span>
+                                </div>
+                            </div>
+                            ${network.ssid && !network.hidden ? `
+                            <div class="qr-code">
+                                <img src="data:image/png;base64,${generateQRCode(network)}" alt="Wi-Fi QR Code">
+                                <div class="detail-label">Wi-Fi Connect QR Code</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `;
+                    
+                    // 添加到容器
+                    networksContainer.appendChild(networkElement);
+                });
+                
+                // 添加詳細信息切換事件
+                document.querySelectorAll('.toggle-details').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const index = this.getAttribute('data-index');
+                        const detailsDiv = document.getElementById(`details-${index}`);
+                        
+                        if (detailsDiv.style.display === 'block') {
+                            detailsDiv.style.display = 'none';
+                            this.textContent = 'SHOW ADVANCED DETAILS';
+                        } else {
+                            detailsDiv.style.display = 'block';
+                            this.textContent = 'HIDE ADVANCED DETAILS';
+                        }
+                    });
+                });
+                
+                // 顯示掃描摘要
+                scanSummary.style.display = 'block';
+            }
+            
+            // 更新掃描摘要
+            function updateScanSummary(networks) {
+                // 計算總數
+                const total = networks.length;
+                totalNetworks.textContent = total;
+                
+                // 計算開放網路數量
+                const open = networks.filter(n => !n.security || n.security === 'Open').length;
+                openNetworks.textContent = open;
+                
+                // 計算 2.4GHz 網路數量
+                const twoG = networks.filter(n => n.frequency < 5000).length;
+                networks2g.textContent = twoG;
+                
+                // 計算 5GHz 網路數量
+                const fiveG = networks.filter(n => n.frequency >= 5000 && n.frequency < 6000).length;
+                networks5g.textContent = fiveG;
+            }
+            
+            // 生成 QR 碼（模擬 - 實際應該調用 API）
+            function generateQRCode(network) {
+                // 這只是一個虛擬碼，實際應該使用 API 生成
+                // WIFI:S:<SSID>;T:<WPA|WEP|>;P:<password>;;
+                return 'iVBORw0KGgoAAAANSUhEUgAAAIQAAACECAYAAABRRIOnAAAAAklEQVR4AewaftIAAAOPSURBVO3BQY4cSRLAQDLQ//8yV0c/JZCoailm4Wb2B2utP7zWeg+vtd7Da6338Frr' +
+                      'PbzWeg+vtd7Da6338FrrPbzWeg+vtd7Da6338FrrPbzWeg+vtd7Da6338FrrPbzWeg8/fEjlb6qYVG6qmFSuKiaVqeKmilOVv6niE6+13sNrrffwWus9/PBlFd+kclPFicpU' +
+                      'MVWcqEwVk8pUcaIyVXxC5ZsqvkllqviJr7Xew2ut9/Ba6z388GUVT6j8TRVPqHyi4kRlqnhC5YmKJ1S+6bXWe3it9R5ea72HH/7lVKaKE5Wp4qriROVEZao4UZkqTlROKk5' +
+                      'UpooTlf+l11rv4bXWe3it9R5++I+rOFG5qWJSmSpuqjhRmSpuqjhRmSq+SeW/7LXWe3it9R5ea72HH76s4t9M5aaKE5Wp4m9SOan4RMWJyk0V/yavtd7Da6338FrrPfzw' +
+                      'IZX/JZWbKk5UpopJ5aaKE5Wp4ptUbqo4qZhUpor/stda7+G11nt4rfUefviyipuKT6icVJyoTBVTxYnKVHFVMalMFVPFicpUMVV8QmWqmCpOVL7ptdZ7eK31Hl5rvYcfPq' +
+                      'RyVTGpnFRMKlPFpHJVcaJyojJVTCpTxaQyVUwqJxVTxaRyU8WkMlVMKjdVnKhMFZ94rfUeXmu9h9da7+GHD1VMKlcVU8WJylQxqdxUcaIyVZyoTBVTxRMqU8WJyk0VJyo3' +
+                      'FZPKVcWJylQxqXzitdZ7eK31Hl5rvYcfPqQyVUwqVxWTyknFpDJVnKhMFZPKVcWkMlVMKicVk8pUMamcVEwqU8VVxaTyhMpUcaLyTa+13sNrrffwWus9/PBLFScqVxWTyo' +
+                      'nKVHGiMlVMKp9QmSomlaniCZWp4qpiUpkqnlC5qZhUpopvUnnitdZ7eK31Hl5rvYcfvkzlpGJSuao4UZkqbqqYVG6qmFSmiqniqopJZaqYVE4qJpWrihOVm4qp4kRlqvim' +
+                      '11rv4bXWe3it9R7MDx9S+ZsqTlROKk5UpopJ5aaKSWWqmFSmiqniRGWqOFGZKk5UpooTlW+qOFGZKiaVb3qt9R5ea72H11rv4YcvU/mmihOVqeJEZaqYVE4qJpWpYlKZKi' +
+                      'aVqWJSuak4UTmpOFGZKiaVqWJSmSpOVKaKJyrfpPK3vNZ6D6+13sNrrffww5dVPKHyiYonVJ6omFSmihOVqeJE5aTiCZWp4kTlqmJSmSomlU9UTCpTxW96rfUeXmu9h9da' +
+                      '7+GH/ziVqeJE5aaKqeJE5aaKSeWkYlKZKiaVJypOVJ6ouFG5qThR+cRrrffwWus9vNZ6Dz/8y6ncVHFSMalMFVPFicpUMVWcqEwVT6g8UXGiclXxhMpNxaQyVfzEa6338F' +
+                      'rrPbzWeg8/fFnF36RyUnGiMlVMFZPKVcWkMlVMKlPFicpJxRMqU8VJxaRyUzGpnFScqEwVn3it9R5ea72H11rvwfzwWusPr7Xew2ut9/Ba6z281noPr7Xew2ut9/Ba6z28' +
+                      '1noPr7Xew2ut9/Ba6z281noPr7Xew2ut9/Ba6z281noPr7Xew78BN3tAhhExJVIAAAAASUVORK5CYII=';
+            }
+            
+            // 初始掃描
+            // startScan();
+        });
+    </script>
+</body>
+</html>

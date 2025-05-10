@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <title>Wi-Fi AP Emulator - HackMaster Pi</title>
+    <meta name="theme-color" content="#0f0f17">
+</head>
+<body>
+    <div class="container">
+        <div class="header-container">
+            <a href="/" class="back-button">← BACK</a>
+            <h1>Wi-Fi AP Emulator</h1>
+        </div>
+        
+        <div class="info-guide">
+            <h3>Wireless Access Point Emulator</h3>
+            <p>This tool turns your Raspberry Pi into a Wi-Fi access point with customizable settings. You can create open or password-protected networks and capture traffic for analysis.</p>
+            <p><strong>Note:</strong> This requires a Wi-Fi adapter that supports AP mode. All captured traffic is stored locally on your device.</p>
+        </div>
+        
+        <div id="setup-panel">
+            <h2>AP Configuration</h2>
+            <div class="form-group">
+                <label for="ssid-input">NETWORK NAME (SSID):</label>
+                <input type="text" id="ssid-input" placeholder="Enter SSID" value="HackMaster-AP">
+            </div>
+            
+            <div class="form-group">
+                <label for="encryption-select">SECURITY TYPE:</label>
+                <select id="encryption-select" class="profile-select">
+                    <option value="open">OPEN (NO PASSWORD)</option>
+                    <option value="wpa2" selected>WPA2-PSK</option>
+                    <option value="wpa3">WPA3-PSK</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="password-group">
+                <label for="password-input">PASSWORD:</label>
+                <input type="text" id="password-input" placeholder="Enter network password" value="hackmaster123">
+                <p class="info-values">Minimum 8 characters recommended for WPA2/WPA3</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="channel-select">CHANNEL:</label>
+                <select id="channel-select" class="profile-select">
+                    <option value="1">1 (2.412 GHz)</option>
+                    <option value="2">2 (2.417 GHz)</option>
+                    <option value="3">3 (2.422 GHz)</option>
+                    <option value="4">4 (2.427 GHz)</option>
+                    <option value="5">5 (2.432 GHz)</option>
+                    <option value="6" selected>6 (2.437 GHz)</option>
+                    <option value="7">7 (2.442 GHz)</option>
+                    <option value="8">8 (2.447 GHz)</option>
+                    <option value="9">9 (2.452 GHz)</option>
+                    <option value="10">10 (2.457 GHz)</option>
+                    <option value="11">11 (2.462 GHz)</option>
+                </select>
+            </div>
+            
+            <div class="advanced-options">
+                <h3>Advanced Options</h3>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="hide-ssid">
+                    <label for="hide-ssid">HIDE NETWORK (HIDDEN SSID)</label>
+                </div>
+                
+                <div class="checkbox-container">
+                    <input type="checkbox" id="captive-portal">
+                    <label for="captive-portal">ENABLE CAPTIVE PORTAL</label>
+                </div>
+                
+                <div class="checkbox-container">
+                    <input type="checkbox" id="internet-sharing">
+                    <label for="internet-sharing">INTERNET SHARING (REQUIRES ETHERNET)</label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mac-address">CUSTOM MAC ADDRESS (OPTIONAL):</label>
+                    <input type="text" id="mac-address" placeholder="Example: 00:11:22:33:44:55">
+                </div>
+            </div>
+            
+            <button id="start-ap-button" class="start-btn">START ACCESS POINT</button>
+        </div>
+        
+        <div id="running-panel" style="display: none;">
+            <div class="status-indicator status-running" id="ap-status">ACCESS POINT RUNNING</div>
+            
+            <div class="network-status">
+                <h2>Network Status</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">SSID</span>
+                        <span class="status-value" id="status-ssid">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">SECURITY</span>
+                        <span class="status-value" id="status-security">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">CONNECTED CLIENTS</span>
+                        <span class="status-value" id="status-clients">0</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">UPTIME</span>
+                        <span class="status-value" id="status-uptime">00:00:00</span>
+                    </div>
+                </div>
+                
+                <div class="capture-panel">
+                    <div class="led-indicator" id="capture-led"></div>
+                    <span id="capture-status">PACKET CAPTURE: NOT ACTIVE</span>
+                    <div style="flex-grow: 1;"></div>
+                    <button id="start-capture-button" class="start-btn">START RECORDING</button>
+                </div>
+                
+                <h3>Connected Clients</h3>
+                <div class="client-list" id="client-list">
+                    <div class="no-profiles">No clients connected</div>
+                </div>
+                
+                <div class="button-group">
+                    <button id="stop-ap-button" class="stop">STOP ACCESS POINT</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="captures-panel" style="display: none;">
+            <h2>Capture Files</h2>
+            <div class="download-panel" id="download-list">
+                <!-- Capture files will be listed here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const setupPanel = document.getElementById('setup-panel');
+            const runningPanel = document.getElementById('running-panel');
+            const capturesPanel = document.getElementById('captures-panel');
+            const ssidInput = document.getElementById('ssid-input');
+            const encryptionSelect = document.getElementById('encryption-select');
+            const passwordGroup = document.getElementById('password-group');
+            const passwordInput = document.getElementById('password-input');
+            const channelSelect = document.getElementById('channel-select');
+            const hideSSID = document.getElementById('hide-ssid');
+            const captivePortal = document.getElementById('captive-portal');
+            const internetSharing = document.getElementById('internet-sharing');
+            const macAddress = document.getElementById('mac-address');
+            const startAPButton = document.getElementById('start-ap-button');
+            const stopAPButton = document.getElementById('stop-ap-button');
+            const apStatus = document.getElementById('ap-status');
+            const statusSSID = document.getElementById('status-ssid');
+            const statusSecurity = document.getElementById('status-security');
+            const statusClients = document.getElementById('status-clients');
+            const statusUptime = document.getElementById('status-uptime');
+            const captureLed = document.getElementById('capture-led');
+            const captureStatus = document.getElementById('capture-status');
+            const startCaptureButton = document.getElementById('start-capture-button');
+            const clientList = document.getElementById('client-list');
+            const downloadList = document.getElementById('download-list');
+            
+            // 狀態變數
+            let isAPRunning = false;
+            let isCapturing = false;
+            let startTime = null;
+            let uptimeInterval = null;
+            let statsInterval = null;
+            let captureStartTime = null;
+            let connectedClients = [];
+            let captureFiles = [];
+            
+            // 安全類型變更處理
+            encryptionSelect.addEventListener('change', function() {
+                if (this.value === 'open') {
+                    passwordGroup.style.display = 'none';
+                } else {
+                    passwordGroup.style.display = 'block';
+                }
+            });
+            
+            // 啟動 AP 按鈕處理
+            startAPButton.addEventListener('click', function() {
+                const ssid = ssidInput.value.trim();
+                if (!ssid) {
+                    alert('Please enter a network name (SSID)');
+                    return;
+                }
+                
+                const encryptionType = encryptionSelect.value;
+                let password = '';
+                
+                if (encryptionType !== 'open') {
+                    password = passwordInput.value.trim();
+                    if (password.length < 8) {
+                        alert('Password should be at least 8 characters long for WPA2/WPA3');
+                        return;
+                    }
+                }
+                
+                startAccessPoint();
+            });
+            
+            // 停止 AP 按鈕處理
+            stopAPButton.addEventListener('click', function() {
+                if (isCapturing) {
+                    if (!confirm('Packet capture is still running. Stop capture and AP?')) {
+                        return;
+                    }
+                    stopCapture();
+                }
+                
+                stopAccessPoint();
+            });
+            
+            // 開始錄製按鈕處理
+            startCaptureButton.addEventListener('click', function() {
+                if (isCapturing) {
+                    stopCapture();
+                } else {
+                    startCapture();
+                }
+            });
+            
+            // 啟動存取點
+            function startAccessPoint() {
+                // 準備 AP 設定
+                const apConfig = {
+                    ssid: ssidInput.value.trim(),
+                    security: encryptionSelect.value,
+                    password: passwordInput.value.trim(),
+                    channel: channelSelect.value,
+                    hidden: hideSSID.checked,
+                    captive_portal: captivePortal.checked,
+                    internet_sharing: internetSharing.checked,
+                    mac_address: macAddress.value.trim()
+                };
+                
+                // 顯示加載狀態
+                startAPButton.disabled = true;
+                startAPButton.innerHTML = '<span class="loading"></span> STARTING...';
+                
+                // 發送啟動 AP 請求
+                fetch('/WiFi/ap/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(apConfig)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 更新 UI 狀態
+                        setupPanel.style.display = 'none';
+                        runningPanel.style.display = 'block';
+                        
+                        // 設置網路資訊
+                        statusSSID.textContent = apConfig.ssid;
+                        statusSecurity.textContent = getSecurityDisplayText(apConfig.security);
+                        
+                        // 啟動定時器更新
+                        isAPRunning = true;
+                        startTime = new Date();
+                        startUptimeCounter();
+                        startStatsUpdater();
+                        
+                        // 載入捕獲文件列表
+                        loadCaptureFiles();
+                    } else {
+                        throw new Error(data.message || 'Failed to start access point');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error starting AP:', error);
+                    alert('Error: ' + error.message);
+                    startAPButton.disabled = false;
+                    startAPButton.textContent = 'START ACCESS POINT';
+                });
+            }
+            
+            // 停止存取點
+            function stopAccessPoint() {
+                // 顯示加載狀態
+                stopAPButton.disabled = true;
+                stopAPButton.innerHTML = '<span class="loading"></span> STOPPING...';
+                apStatus.textContent = 'SHUTTING DOWN ACCESS POINT...';
+                
+                // 發送停止 AP 請求
+                fetch('/WiFi/ap/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 更新 UI 狀態
+                        resetUI();
+                    } else {
+                        throw new Error(data.message || 'Failed to stop access point');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error stopping AP:', error);
+                    alert('Error: ' + error.message);
+                    stopAPButton.disabled = false;
+                    apStatus.textContent = 'ACCESS POINT RUNNING';
+                });
+            }
+            
+            // 開始封包捕獲
+            function startCapture() {
+                if (!isAPRunning) return;
+                
+                // 顯示加載狀態
+                startCaptureButton.disabled = true;
+                startCaptureButton.innerHTML = '<span class="loading"></span> STARTING...';
+                
+                // 發送開始捕獲請求
+                fetch('/WiFi/ap/capture/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 更新 UI 狀態
+                        isCapturing = true;
+                        captureStartTime = new Date();
+                        captureLed.classList.add('led-recording');
+                        captureStatus.textContent = 'PACKET CAPTURE: RECORDING';
+                        startCaptureButton.textContent = 'STOP RECORDING';
+                        startCaptureButton.classList.add('stop');
+                        startCaptureButton.disabled = false;
+                    } else {
+                        throw new Error(data.message || 'Failed to start packet capture');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error starting capture:', error);
+                    alert('Error: ' + error.message);
+                    startCaptureButton.disabled = false;
+                    startCaptureButton.textContent = 'START RECORDING';
+                });
+            }
+            
+            // 停止封包捕獲
+            function stopCapture() {
+                if (!isCapturing) return;
+                
+                // 顯示加載狀態
+                startCaptureButton.disabled = true;
+                startCaptureButton.innerHTML = '<span class="loading"></span> STOPPING...';
+                
+                // 發送停止捕獲請求
+                fetch('/WiFi/ap/capture/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 更新 UI 狀態
+                        isCapturing = false;
+                        captureLed.classList.remove('led-recording');
+                        captureStatus.textContent = 'PACKET CAPTURE: NOT ACTIVE';
+                        startCaptureButton.textContent = 'START RECORDING';
+                        startCaptureButton.classList.remove('stop');
+                        startCaptureButton.disabled = false;
+                        
+                        // 更新捕獲文件列表
+                        loadCaptureFiles();
+                        
+                        // 如果有新的捕獲文件，顯示捕獲面板
+                        if (data.capture_file) {
+                            capturesPanel.style.display = 'block';
+                        }
+                    } else {
+                        throw new Error(data.message || 'Failed to stop packet capture');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error stopping capture:', error);
+                    alert('Error: ' + error.message);
+                    startCaptureButton.disabled = false;
+                    startCaptureButton.textContent = 'STOP RECORDING';
+                });
+            }
+            
+            // 載入捕獲文件列表
+            function loadCaptureFiles() {
+                fetch('/WiFi/ap/capture/list')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.captures) {
+                            captureFiles = data.captures;
+                            updateCaptureFilesList();
+                            
+                            if (captureFiles.length > 0) {
+                                capturesPanel.style.display = 'block';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading capture files:', error);
+                    });
+            }
+            
+            // 更新捕獲文件列表
+            function updateCaptureFilesList() {
+                // 清空列表
+                downloadList.innerHTML = '';
+                
+                if (captureFiles.length === 0) {
+                    downloadList.innerHTML = '<div class="no-profiles">No capture files available</div>';
+                    return;
+                }
+                
+                // 排序文件（最新的優先）
+                captureFiles.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                // 添加每個文件
+                captureFiles.forEach(file => {
+                    const fileSize = formatFileSize(file.size);
+                    const timestamp = new Date(file.timestamp).toLocaleString();
+                    
+                    const fileElement = document.createElement('div');
+                    fileElement.className = 'packet-file';
+                    fileElement.innerHTML = `
+                        <div class="packet-info">
+                            <div class="packet-name">${file.filename}</div>
+                            <div class="packet-details">
+                                Size: ${fileSize} | Created: ${timestamp}
+                            </div>
+                        </div>
+                        <a href="/WiFi/ap/capture/download/${file.id}" class="download-btn" download="${file.filename}">DOWNLOAD</a>
+                    `;
+                    
+                    downloadList.appendChild(fileElement);
+                });
+            }
+            
+            // 啟動運行時間計數器
+            function startUptimeCounter() {
+                uptimeInterval = setInterval(updateUptime, 1000);
+            }
+            
+            // 更新運行時間
+            function updateUptime() {
+                if (!startTime) return;
+                
+                const now = new Date();
+                const diff = Math.floor((now - startTime) / 1000);
+                const hours = Math.floor(diff / 3600).toString().padStart(2, '0');
+                const minutes = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+                const seconds = (diff % 60).toString().padStart(2, '0');
+                
+                statusUptime.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+            
+            // 啟動統計資訊更新器
+            function startStatsUpdater() {
+                // 立即更新一次
+                updateAPStats();
+                
+                // 設置定時更新
+                statsInterval = setInterval(updateAPStats, 5000);
+            }
+            
+            // 更新 AP 統計資訊
+            function updateAPStats() {
+                fetch('/WiFi/ap/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // 更新連接的客戶端數量
+                            statusClients.textContent = data.connected_clients.length;
+                            
+                            // 更新客戶端列表
+                            updateClientList(data.connected_clients);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error updating AP stats:', error);
+                    });
+            }
+            
+            // 更新客戶端列表
+            function updateClientList(clients) {
+                connectedClients = clients;
+                
+                // 清空列表
+                clientList.innerHTML = '';
+                
+                if (clients.length === 0) {
+                    clientList.innerHTML = '<div class="no-profiles">No clients connected</div>';
+                    return;
+                }
+                
+                // 添加每個客戶端
+                clients.forEach(client => {
+                    const clientElement = document.createElement('div');
+                    clientElement.className = 'client-item';
+                    
+                    // 嘗試獲取設備名稱，如果沒有則使用 MAC 地址
+                    const deviceName = client.hostname || `Unknown Device (${client.mac})`;
+                    
+                    clientElement.innerHTML = `
+                        <div class="client-info">
+                            <div class="client-name">${deviceName}</div>
+                            <div class="client-details">
+                                IP: ${client.ip} | MAC: ${client.mac} | Connected: ${client.connected_time}
+                            </div>
+                        </div>
+                    `;
+                    
+                    clientList.appendChild(clientElement);
+                });
+            }
+            
+            // 重置 UI 狀態
+            function resetUI() {
+                // 清除定時器
+                if (uptimeInterval) {
+                    clearInterval(uptimeInterval);
+                    uptimeInterval = null;
+                }
+                
+                if (statsInterval) {
+                    clearInterval(statsInterval);
+                    statsInterval = null;
+                }
+                
+                // 重置狀態變數
+                isAPRunning = false;
+                isCapturing = false;
+                startTime = null;
+                captureStartTime = null;
+                
+                // 重置 UI 元素
+                setupPanel.style.display = 'block';
+                runningPanel.style.display = 'none';
+                startAPButton.disabled = false;
+                startAPButton.textContent = 'START ACCESS POINT';
+                stopAPButton.disabled = false;
+                captureLed.classList.remove('led-recording');
+                
+                // 保持捕獲文件面板可見（如果有文件）
+                if (captureFiles.length > 0) {
+                    capturesPanel.style.display = 'block';
+                }
+            }
+            
+            // 工具函數：根據安全類型獲取顯示文字
+            function getSecurityDisplayText(securityType) {
+                switch(securityType) {
+                    case 'open': return 'OPEN (NO PASSWORD)';
+                    case 'wpa2': return 'WPA2-PSK';
+                    case 'wpa3': return 'WPA3-PSK';
+                    default: return securityType.toUpperCase();
+                }
+            }
+            
+            // 工具函數：格式化文件大小
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+                else if (bytes < 1073741824) return (bytes / 1048576).toFixed(2) + ' MB';
+                else return (bytes / 1073741824).toFixed(2) + ' GB';
+            }
+            
+            // 初始化頁面
+            loadCaptureFiles();
+        });
+    </script>
+</body>
+</html>

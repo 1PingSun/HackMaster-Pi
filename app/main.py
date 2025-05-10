@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from api import WiFi, BLE, RFID
+from api import WiFi, BLE, IR, RFID
 import os
 
 app = FastAPI(
@@ -29,6 +29,7 @@ async def favicon():
 
 app.include_router(BLE.router)
 app.include_router(WiFi.router)
+app.include_router(IR.router)
 app.include_router(RFID.router)
 
 if __name__ == "__main__":

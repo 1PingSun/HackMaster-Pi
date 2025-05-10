@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <title>IR Signal Enumerator - HackMaster Pi</title>
+    <meta name="theme-color" content="#0f0f17">
+</head>
+<body>
+    <div class="container">
+        <div class="header-container">
+            <a href="/" class="back-button">← BACK</a>
+            <h1>IR Signal Enumerator</h1>
+        </div>
+        
+        <div class="info-guide">
+            <h3>IR Signal Bruteforce Tool</h3>
+            <p>This tool allows you to enumerate and test various IR codes to control devices. Select a device type, choose settings, and click buttons to send signals.</p>
+            <p><strong>Warning:</strong> Ensure your IR transmitter is pointed directly at the target device for best results.</p>
+        </div>
+        
+        <div class="settings-panel">
+            <h2>Enumeration Settings</h2>
+            <div class="settings-row">
+                <label for="device-type">DEVICE TYPE:</label>
+                <select id="device-type" class="profile-select">
+                    <option value="tv">TV</option>
+                    <option value="ac">AIR CONDITIONER</option>
+                    <option value="dvd">DVD/BLU-RAY PLAYER</option>
+                    <option value="stereo">STEREO/SOUND SYSTEM</option>
+                    <option value="projector">PROJECTOR</option>
+                    <option value="stb">SET-TOP BOX</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <label for="brand-select">BRAND (OPTIONAL):</label>
+                <select id="brand-select" class="profile-select">
+                    <option value="">ALL BRANDS</option>
+                    <!-- Brands will be populated based on device type -->
+                </select>
+            </div>
+            <div class="settings-row">
+                <label for="protocol-select">IR PROTOCOL:</label>
+                <select id="protocol-select" class="profile-select">
+                    <option value="all">ALL PROTOCOLS</option>
+                    <option value="nec">NEC</option>
+                    <option value="sony">SONY</option>
+                    <option value="rc5">RC5</option>
+                    <option value="rc6">RC6</option>
+                    <option value="jvc">JVC</option>
+                    <option value="samsung">SAMSUNG</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <label for="delay-select">DELAY BETWEEN SIGNALS (MS):</label>
+                <select id="delay-select" class="profile-select">
+                    <option value="100">100 MS</option>
+                    <option value="250">250 MS</option>
+                    <option value="500" selected>500 MS</option>
+                    <option value="1000">1000 MS</option>
+                    <option value="2000">2000 MS</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <label for="iteration-select">MAX CODES TO TRY:</label>
+                <select id="iteration-select" class="profile-select">
+                    <option value="10">10 CODES</option>
+                    <option value="50">50 CODES</option>
+                    <option value="100" selected>100 CODES</option>
+                    <option value="200">200 CODES</option>
+                    <option value="500">500 CODES</option>
+                    <option value="1000">1000 CODES (MAY TAKE LONG TIME)</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="remote-container" id="remote">
+            <button class="remote-button power-button" data-function="power">POWER</button>
+            <button class="remote-button number-button" data-function="1">1</button>
+            <button class="remote-button number-button" data-function="2">2</button>
+            <button class="remote-button number-button" data-function="3">3</button>
+            <button class="remote-button number-button" data-function="4">4</button>
+            <button class="remote-button number-button" data-function="5">5</button>
+            <button class="remote-button number-button" data-function="6">6</button>
+            <button class="remote-button number-button" data-function="7">7</button>
+            <button class="remote-button number-button" data-function="8">8</button>
+            <button class="remote-button number-button" data-function="9">9</button>
+            <button class="remote-button action-button" data-function="menu">MENU</button>
+            <button class="remote-button number-button" data-function="0">0</button>
+            <button class="remote-button action-button" data-function="exit">EXIT</button>
+            <button class="remote-button action-button" data-function="vol_up">VOL+</button>
+            <button class="remote-button action-button" data-function="up">↑</button>
+            <button class="remote-button action-button" data-function="ch_up">CH+</button>
+            <button class="remote-button action-button" data-function="left">←</button>
+            <button class="remote-button action-button" data-function="ok">OK</button>
+            <button class="remote-button action-button" data-function="right">→</button>
+            <button class="remote-button action-button" data-function="vol_down">VOL-</button>
+            <button class="remote-button action-button" data-function="down">↓</button>
+            <button class="remote-button action-button" data-function="ch_down">CH-</button>
+            <button class="remote-button action-button" data-function="mute">MUTE</button>
+            <button class="remote-button action-button" data-function="source">SOURCE</button>
+            <button class="remote-button action-button" data-function="back">BACK</button>
+        </div>
+        
+        <div id="progress-section" style="display: none;">
+            <h3>Enumerating Codes...</h3>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar">0%</div>
+            </div>
+            <div class="status-indicator" id="enumeration-status">SENDING CODE 0 OF 0</div>
+            <button id="stop-button" class="stop">STOP ENUMERATION</button>
+        </div>
+        
+        <div id="results-container" style="display: none;">
+            <h2>Successful Codes</h2>
+            <div id="results-list">
+                <!-- Results will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const deviceTypeSelect = document.getElementById('device-type');
+            const brandSelect = document.getElementById('brand-select');
+            const protocolSelect = document.getElementById('protocol-select');
+            const delaySelect = document.getElementById('delay-select');
+            const iterationSelect = document.getElementById('iteration-select');
+            const remoteButtons = document.querySelectorAll('.remote-button');
+            const progressSection = document.getElementById('progress-section');
+            const progressBar = document.getElementById('progress-bar');
+            const enumerationStatus = document.getElementById('enumeration-status');
+            const stopButton = document.getElementById('stop-button');
+            const resultsContainer = document.getElementById('results-container');
+            const resultsList = document.getElementById('results-list');
+            
+            // 定義不同設備類型可用的品牌
+            const deviceBrands = {
+                tv: ['Samsung', 'LG', 'Sony', 'Panasonic', 'Philips', 'Toshiba', 'Sharp', 'Vizio'],
+                ac: ['Daikin', 'Mitsubishi', 'Panasonic', 'LG', 'Samsung', 'Hitachi', 'Fujitsu'],
+                dvd: ['Sony', 'Samsung', 'LG', 'Panasonic', 'Philips', 'Toshiba'],
+                stereo: ['Sony', 'Yamaha', 'Denon', 'Pioneer', 'JBL', 'Bose', 'Onkyo'],
+                projector: ['Epson', 'BenQ', 'Optoma', 'Sony', 'ViewSonic', 'Panasonic'],
+                stb: ['Samsung', 'Roku', 'Apple', 'Amazon', 'Xiaomi', 'Huawei']
+            };
+            
+            // 保存成功代碼的數組
+            let successfulCodes = [];
+            
+            // 枚舉狀態變量
+            let isEnumerating = false;
+            let currentCodeIndex = 0;
+            let totalCodes = 0;
+            let currentFunction = '';
+            let enumerationInterval = null;
+            
+            // 填充品牌選擇框
+            function populateBrands() {
+                const deviceType = deviceTypeSelect.value;
+                const brands = deviceBrands[deviceType] || [];
+                
+                // 清除現有選項，保留第一個
+                while (brandSelect.options.length > 1) {
+                    brandSelect.remove(1);
+                }
+                
+                // 添加品牌選項
+                brands.forEach(brand => {
+                    const option = document.createElement('option');
+                    option.value = brand.toLowerCase();
+                    option.textContent = brand.toUpperCase();
+                    brandSelect.appendChild(option);
+                });
+            }
+            
+            // 初始化填充品牌
+            populateBrands();
+            
+            // 設備類型變更時更新品牌
+            deviceTypeSelect.addEventListener('change', populateBrands);
+            
+            // 遠程按鈕點擊處理
+            remoteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    if (isEnumerating) return;
+                    
+                    const functionName = this.getAttribute('data-function');
+                    startEnumeration(functionName);
+                });
+            });
+            
+            // 停止按鈕點擊處理
+            stopButton.addEventListener('click', stopEnumeration);
+            
+            // 開始枚舉
+            function startEnumeration(functionName) {
+                // 設置枚舉參數
+                currentFunction = functionName;
+                const deviceType = deviceTypeSelect.value;
+                const brand = brandSelect.value;
+                const protocol = protocolSelect.value;
+                const delay = parseInt(delaySelect.value);
+                const maxIterations = parseInt(iterationSelect.value);
+                
+                // 清除之前的結果
+                if (currentFunction === 'power') {
+                    successfulCodes = [];
+                    resultsList.innerHTML = '';
+                    resultsContainer.style.display = 'none';
+                }
+                
+                // 更新UI狀態
+                isEnumerating = true;
+                currentCodeIndex = 0;
+                totalCodes = maxIterations;
+                
+                // 高亮當前按鈕
+                remoteButtons.forEach(btn => {
+                    if (btn.getAttribute('data-function') === functionName) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                
+                // 顯示進度區域
+                progressSection.style.display = 'block';
+                updateProgress(0);
+                
+                // 開始枚舉過程
+                sendNextCode();
+                
+                // 設置定時發送代碼的間隔
+                enumerationInterval = setInterval(sendNextCode, delay);
+            }
+            
+            // 發送下一個代碼
+            function sendNextCode() {
+                if (currentCodeIndex >= totalCodes) {
+                    stopEnumeration();
+                    return;
+                }
+                
+                // 更新進度
+                updateProgress(Math.floor((currentCodeIndex / totalCodes) * 100));
+                enumerationStatus.textContent = `SENDING CODE ${currentCodeIndex + 1} OF ${totalCodes}`;
+                
+                // 構建請求數據
+                const requestData = {
+                    device_type: deviceTypeSelect.value,
+                    brand: brandSelect.value,
+                    protocol: protocolSelect.value,
+                    function: currentFunction,
+                    code_index: currentCodeIndex
+                };
+                
+                // 發送代碼請求
+                fetch('/IR/enumerate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // 處理響應
+                    if (data.success && data.response) {
+                        // 檢測到響應，添加到成功代碼列表
+                        addSuccessfulCode(data);
+                    }
+                    
+                    // 增加代碼索引
+                    currentCodeIndex++;
+                })
+                .catch(error => {
+                    console.error('Error sending code:', error);
+                    currentCodeIndex++;
+                });
+            }
+            
+            // 更新進度條
+            function updateProgress(percentage) {
+                progressBar.style.width = percentage + '%';
+                progressBar.textContent = percentage + '%';
+            }
+            
+            // 停止枚舉
+            function stopEnumeration() {
+                // 清除定時器
+                if (enumerationInterval) {
+                    clearInterval(enumerationInterval);
+                    enumerationInterval = null;
+                }
+                
+                // 更新UI狀態
+                isEnumerating = false;
+                
+                // 取消按鈕高亮
+                remoteButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // 更新狀態文本
+                if (currentCodeIndex >= totalCodes) {
+                    enumerationStatus.textContent = `ENUMERATION COMPLETED: ${successfulCodes.length} CODES FOUND`;
+                } else {
+                    enumerationStatus.textContent = `ENUMERATION STOPPED AT CODE ${currentCodeIndex} OF ${totalCodes}`;
+                }
+                
+                // 顯示結果（如果有）
+                if (successfulCodes.length > 0) {
+                    resultsContainer.style.display = 'block';
+                }
+            }
+            
+            // 添加成功代碼到結果列表
+            function addSuccessfulCode(codeData) {
+                // 將代碼添加到數組
+                successfulCodes.push(codeData);
+                
+                // 創建結果卡片
+                const resultCard = document.createElement('div');
+                resultCard.className = 'result-card';
+                
+                // 代碼格式化
+                const codeHex = codeData.code_hex || 'N/A';
+                const protocol = codeData.protocol || 'Unknown';
+                const deviceType = deviceTypeSelect.options[deviceTypeSelect.selectedIndex].text;
+                const brand = brandSelect.value ? brandSelect.options[brandSelect.selectedIndex].text : 'Unknown';
+                const functionName = currentFunction.toUpperCase().replace('_', ' ');
+                
+                resultCard.innerHTML = `
+                    <div class="result-title">
+                        <h3>${protocol} - ${functionName}</h3>
+                        <div class="result-actions">
+                            <button class="small-button resend-btn" data-index="${successfulCodes.length - 1}">RESEND</button>
+                            <button class="small-button save-btn" data-index="${successfulCodes.length - 1}">SAVE</button>
+                        </div>
+                    </div>
+                    <div class="profile-info">
+                        <span class="profile-label">DEVICE:</span>
+                        <span class="profile-value">${deviceType} (${brand})</span>
+                    </div>
+                    <div class="profile-info">
+                        <span class="profile-label">FUNCTION:</span>
+                        <span class="profile-value">${functionName}</span>
+                    </div>
+                    <div class="profile-info">
+                        <span class="profile-label">PROTOCOL:</span>
+                        <span class="profile-value">${protocol}</span>
+                    </div>
+                    <div class="code-display">${codeHex}</div>
+                `;
+                
+                // 添加到結果列表
+                resultsList.prepend(resultCard);
+                
+                // 添加重新發送按鈕事件
+                resultCard.querySelector('.resend-btn').addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    resendCode(index);
+                });
+                
+                // 添加保存按鈕事件
+                resultCard.querySelector('.save-btn').addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    saveCodeToLibrary(index);
+                });
+                
+                // 顯示結果容器
+                resultsContainer.style.display = 'block';
+            }
+            
+            // 重新發送代碼
+            function resendCode(index) {
+                const codeData = successfulCodes[index];
+                if (!codeData) return;
+                
+                // 發送保存的代碼
+                fetch('/IR/transmit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: codeData.code_hex,
+                        protocol: codeData.protocol
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Code sent successfully!');
+                    } else {
+                        alert('Failed to send code: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error sending code:', error);
+                    alert('Error sending code: ' + error.message);
+                });
+            }
+            
+            // 保存代碼到信號庫
+            function saveCodeToLibrary(index) {
+                const codeData = successfulCodes[index];
+                if (!codeData) return;
+                
+                // 提示用戶輸入名稱
+                const name = prompt('Enter a name for this signal:', 
+                                    `${deviceTypeSelect.options[deviceTypeSelect.selectedIndex].text} ${currentFunction.toUpperCase().replace('_', ' ')}`);
+                if (!name) return;
+                
+                // 準備保存數據
+                const signalData = {
+                    name: name,
+                    description: `${brandSelect.value ? brandSelect.options[brandSelect.selectedIndex].text : 'Unknown brand'} - ${currentFunction.toUpperCase().replace('_', ' ')}`,
+                    data: codeData.code_hex,
+                    format: codeData.protocol,
+                    length: codeData.bits || 0
+                };
+                
+                // 保存到本地存儲
+                try {
+                    let irSignals = JSON.parse(localStorage.getItem('irSignals') || '[]');
+                    
+                    // 添加時間戳和ID
+                    signalData.timestamp = new Date().toISOString();
+                    signalData.id = Date.now().toString();
+                    
+                    // 檢查是否存在相同名稱
+                    const existingIndex = irSignals.findIndex(signal => signal.name === name);
+                    if (existingIndex !== -1) {
+                        if (confirm(`A signal named "${name}" already exists. Do you want to replace it?`)) {
+                            irSignals[existingIndex] = signalData;
+                        } else {
+                            return;
+                        }
+                    } else {
+                        irSignals.push(signalData);
+                    }
+                    
+                    // 保存更新後的數組
+                    localStorage.setItem('irSignals', JSON.stringify(irSignals));
+                    alert(`Signal "${name}" saved successfully!`);
+                } catch (e) {
+                    console.error('Error saving signal:', e);
+                    alert('Failed to save signal: ' + e.message);
+                }
+            }
+            
+            // 模擬代碼響應（用於測試）
+            function simulateSuccessfulCode() {
+                // 隨機選擇是否成功
+                if (Math.random() < 0.1) {  // 10% 成功率
+                    const protocols = ['NEC', 'SONY', 'RC5', 'RC6', 'SAMSUNG'];
+                    const randomProtocol = protocols[Math.floor(Math.random() * protocols.length)];
+                    const randomHex = Array.from({length: 8}, () => Math.floor(Math.random() * 16).toString(16)).join('').toUpperCase();
+                    
+                    addSuccessfulCode({
+                        success: true,
+                        response: true,
+                        protocol: randomProtocol,
+                        code_hex: randomHex,
+                        bits: 32
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
