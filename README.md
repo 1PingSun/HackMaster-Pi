@@ -1,4 +1,4 @@
-[![License GPL](https://img.shields.io/badge/license-GPL-blue.svg)](https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/refs/heads/main/LICENSE)
+[![License MIT](https://img.shields.io/badge/LICENSE-MIT-green)](https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/refs/heads/main/LICENSE)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="icon/Wide/PNG-Dark.png" />
