@@ -35,7 +35,7 @@ sudo usermod -a -G i2c $(whoami)
 newgrp i2c
 
 # ==== for apple_bleee ====
-echo "pi ALL=(ALL) NOPASSWD: /usr/bin/python3 ./app/mylib/apple_bleee/adv_airpods.py" | sudo tee /etc/sudoers.d/user-python && sudo chmod 440 /etc/sudoers.d/user-python
+echo "pi ALL=(ALL) NOPASSWD: /usr/bin/python3 ./app/mylib/apple_blee/adv_airpods.py" | sudo tee /etc/sudoers.d/user-python && sudo chmod 440 /etc/sudoers.d/user-python
 sudo apt install -y bluez libpcap-dev libev-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev cmake libbluetooth-dev
 sudo apt install git
 sudo pip3 install --break-system-packages -r ./app/mylib/apple_bleeerequirements.txt
@@ -46,3 +46,22 @@ sudo apt install bluez bluez-tools -y
 
 # === for ir ===
 sudo apt-get install python3-rpi.gpio
+
+# ==== for WiFi 網卡驅動 (8812AU) ====
+echo "正在安裝 WiFi 網卡驅動 (8812AU)..."
+cd ~
+git clone https://github.com/morrownr/8812au-20210820.git
+cd 8812au-20210820
+
+# 安裝編譯所需的套件
+sudo apt update
+sudo apt install -y dkms build-essential bc
+
+# 編譯和安裝驅動程式
+sudo ./install-driver.sh
+
+# 回到原始目錄
+cd /home/pi/HackMaster-Pi
+
+echo "WiFi 網卡驅動安裝完成，建議重新啟動系統以確保驅動程式正常載入"
+echo "執行 'sudo reboot' 來重新啟動系統"

