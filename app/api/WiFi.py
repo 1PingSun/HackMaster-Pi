@@ -9,6 +9,7 @@ import time
 import uuid
 import json
 from .mylib.WeakPasswordGenerater.main import PasswordGenerator
+from .mylib.ap_scan import scan_wifi_networks
 import random
 import asyncio
 import csv
@@ -333,7 +334,25 @@ async def get_interface_status(interface: str):
             "interface": interface
         }
 
-
+@router.post("/ap/scan")
+async def scan_wifi(request: ScanWifiRequest):
+    try:
+        # 使用 ap_scan 模組進行掃描
+        nearby_ap = scan_wifi_networks(request.interface, request.timeout)
+        return {
+            "success": True,
+            "ap_list": nearby_ap,
+            "interface": request.interface,
+            "count": len(nearby_ap)
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to scan networks: {str(e)}",
+            "ap_list": [],
+            "interface": request.interface,
+            "count": 0
+        }
 
 @router.post("/ap/start")
 async def start_ap(config: APConfig):

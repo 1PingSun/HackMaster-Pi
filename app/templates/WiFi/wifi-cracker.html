@@ -21,6 +21,29 @@
         <button onclick="activateMonitorMode()">Activate Monitor Mode</button>
         <p id="monitorStatus">The {} network interface status: </p>
          
+        <h1>3. Scan Wi-Fi Networks</h1>
+        <button id="scanButton" onclick="scanWifiNetworks()">Scan Wi-Fi Networks</button>
+        <div id="scanResponse">
+            <div id="loadingIndicator" style="display: none;">
+                <p>⏳ Scanning for Wi-Fi networks...</p>
+            </div>
+            <div id="scanResults" style="display: none;">
+                <h3>Scan Results:</h3>
+                <table id="networksTable" border="1">
+                    <thead>
+                        <tr>
+                            <th>BSSID</th>
+                            <th>Channel</th>
+                            <th>Encryption</th>
+                            <th>ESSID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="networksTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -135,5 +158,91 @@
             } catch (error) {
                 document.getElementById('monitorStatus').textContent = `The ${interfaceName} network interface status: Error - ${error.message}`;
             }
+        }
+
+        async function scanWifiNetworks() {
+            if (!selectedInterface) {
+                alert('Please select a network interface first');
+                return;
+            }
+
+            const scanButton = document.getElementById('scanButton');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const scanResults = document.getElementById('scanResults');
+            
+            // 禁用掃描按鈕並顯示載入指示器
+            scanButton.disabled = true;
+            scanButton.textContent = 'Scanning...';
+            loadingIndicator.style.display = 'block';
+            scanResults.style.display = 'none';
+
+            try {
+                const response = await fetch('/WiFi/ap/scan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        interface: selectedInterface,
+                        timeout: 10
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.ap_list) {
+                    displayScanResults(data.ap_list);
+                } else {
+                    throw new Error(data.message || 'Failed to scan networks');
+                }
+            } catch (error) {
+                alert(`Network scan failed: ${error.message}`);
+                scanResults.style.display = 'none';
+            } finally {
+                // 恢復掃描按鈕
+                scanButton.disabled = false;
+                scanButton.textContent = 'Scan Wi-Fi Networks';
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        function displayScanResults(networks) {
+            const scanResults = document.getElementById('scanResults');
+            const tableBody = document.getElementById('networksTableBody');
+            
+            // 清空表格內容
+            tableBody.innerHTML = '';
+            
+            if (networks.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4">No networks found</td></tr>';
+            } else {
+                networks.forEach(network => {
+                    const row = document.createElement('tr');
+                    
+                    // BSSID
+                    const bssidCell = document.createElement('td');
+                    bssidCell.textContent = network.BSSID || 'Unknown';
+                    row.appendChild(bssidCell);
+                    
+                    // Channel
+                    const channelCell = document.createElement('td');
+                    channelCell.textContent = network.CH || 'Unknown';
+                    row.appendChild(channelCell);
+                    
+                    // Encryption
+                    const encryptionCell = document.createElement('td');
+                    encryptionCell.textContent = network.ENC || 'Unknown';
+                    row.appendChild(encryptionCell);
+                    
+                    // ESSID
+                    const essidCell = document.createElement('td');
+                    essidCell.textContent = network.ESSID || '<hidden>';
+                    row.appendChild(essidCell);
+                    
+                    tableBody.appendChild(row);
+                });
+            }
+            
+            scanResults.style.display = 'block';
         }
     </script>
