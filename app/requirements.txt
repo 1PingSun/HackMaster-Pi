@@ -5,7 +5,7 @@ psutil>=7.0.0
 bs4
 fleep
 Pillow
-pybluez
+# pybluez
 requests
 pycrypto
 netifaces
