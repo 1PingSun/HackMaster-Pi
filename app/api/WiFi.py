@@ -123,6 +123,50 @@ def read_wordlist_generator(request: Request):
         {"request": request, "message": "Wordlist Generator"}
     )
 
+@router.get("/adapter/list")
+async def list_adapters(request: Request):
+    """
+    執行 ifconfig -a 命令並返回所有網路介面的詳細資訊
+    """
+    try:
+        # 執行 ifconfig -a 命令
+        result = subprocess.run(
+            ["ifconfig", "-a"],
+            capture_output=True, text=True, timeout=10
+        )
+        
+        if result.returncode == 0:
+            return {
+                "success": True,
+                "output": result.stdout,
+                "message": "Network adapters listed successfully"
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"Failed to execute ifconfig: {result.stderr}",
+                "output": result.stderr
+            }
+            
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "message": "Command timed out",
+            "output": ""
+        }
+    except FileNotFoundError:
+        return {
+            "success": False,
+            "message": "ifconfig command not found. Please ensure net-tools is installed.",
+            "output": ""
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error executing ifconfig: {str(e)}",
+            "output": ""
+        }
+
 @router.post("/ap/start")
 async def start_ap(config: APConfig):
     global ap_running, ap_start_time, ap_config

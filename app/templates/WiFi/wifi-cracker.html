@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <title>Wi-Fi Password Cracker - HackMaster Pi</title>
+    <meta name="theme-color" content="#0f0f17">
+</head>
+<body>
+    <div class="container">
+        <h1>1. List Adapter</h1>
+        <!-- use api GET /WiFi/adapter/list to get the avaliable adapters-->
+        
+        <button onclick="listAdapters()">List Adapters</button>
+        <div id="adapterResponse"></div>
+         
+    </div>
+
+    <script>
+        async function listAdapters() {
+            try {
+                const response = await fetch('/WiFi/adapter/list');
+                const data = await response.json();
+                
+                const responseDiv = document.getElementById('adapterResponse');
+                
+                if (data.success) {
+                    responseDiv.innerHTML = `
+                        <h3>Success</h3>
+                        <p>Message: ${data.message}</p>
+                        <h4>Output:</h4>
+                        <pre>${data.output}</pre>
+                    `;
+                } else {
+                    responseDiv.innerHTML = `
+                        <h3>Error</h3>
+                        <p>Message: ${data.message}</p>
+                        <pre>${data.output || ''}</pre>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('adapterResponse').innerHTML = `
+                    <h3>Network Error</h3>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
