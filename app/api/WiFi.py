@@ -878,7 +878,7 @@ async def start_monitor_mode(request: NetworkInterfaceRequest):
 
 # 掃描 Wi-Fi 網路
 @router.post("/wifi/scan")
-async def scan_wifi_networks(request: ScanWifiRequest):
+async def scan_wifi_networks_API(request: ScanWifiRequest):
     try:
         # 使用 airodump-ng 掃描周圍的 Wi-Fi 網路
         scan_result = subprocess.run(
