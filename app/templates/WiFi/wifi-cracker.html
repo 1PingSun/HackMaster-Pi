@@ -10,17 +10,25 @@
 <body>
     <div class="container">
         <h1>1. List Adapter</h1>
-        <!-- use api GET /WiFi/adapter/list to get the avaliable adapters-->
         
         <button onclick="listAdapters()">List Adapters</button>
         <div id="adapterResponse"></div>
+
+        <h1>2. Activate Monitor Mode</h1>
+        <select id="interfaceSelect">
+            <option value="">-- Select an interface --</option>
+        </select>
+        <button onclick="activateMonitorMode()">Activate Monitor Mode</button>
+        <p id="monitorStatus">The {} network interface status: </p>
          
     </div>
 
     <script>
+        let selectedInterface = '';
+
         async function listAdapters() {
             try {
-                const response = await fetch('/WiFi/adapter/list');
+                const response = await fetch('/WiFi/interface/details');
                 const data = await response.json();
                 
                 const responseDiv = document.getElementById('adapterResponse');
@@ -32,6 +40,9 @@
                         <h4>Output:</h4>
                         <pre>${data.output}</pre>
                     `;
+                    
+                    // 載入網卡選項
+                    loadInterfaceList();
                 } else {
                     responseDiv.innerHTML = `
                         <h3>Error</h3>
@@ -44,6 +55,85 @@
                     <h3>Network Error</h3>
                     <p>${error.message}</p>
                 `;
+            }
+        }
+
+        async function loadInterfaceList() {
+            try {
+                const response = await fetch('/WiFi/interface/list');
+                const data = await response.json();
+                
+                const select = document.getElementById('interfaceSelect');
+                
+                if (data.success) {
+                    // 清空現有選項
+                    select.innerHTML = '<option value="">-- Select an interface --</option>';
+                    
+                    // 添加網卡選項
+                    data.adapters.forEach(adapter => {
+                        const option = document.createElement('option');
+                        option.value = adapter;
+                        option.textContent = adapter;
+                        select.appendChild(option);
+                    });
+                    
+                    // 監聽選擇變更
+                    select.onchange = function() {
+                        selectedInterface = this.value;
+                        if (selectedInterface) {
+                            checkInterfaceStatus(selectedInterface);
+                        }
+                    };
+                }
+            } catch (error) {
+                console.error('Error loading interfaces:', error);
+            }
+        }
+
+        async function activateMonitorMode() {
+            if (!selectedInterface) {
+                alert('Please select an interface first');
+                return;
+            }
+
+            try {
+                const response = await fetch('/WiFi/interface/monitorMode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        interface: selectedInterface
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`Monitor mode activated for ${selectedInterface}`);
+                    checkInterfaceStatus(selectedInterface);
+                } else {
+                    alert(`Failed to activate monitor mode: ${data.message}`);
+                }
+            } catch (error) {
+                alert(`Network error: ${error.message}`);
+            }
+        }
+
+        async function checkInterfaceStatus(interfaceName) {
+            try {
+                const response = await fetch(`/WiFi/interface/status?interface=${interfaceName}`);
+                const data = await response.json();
+                
+                const statusElement = document.getElementById('monitorStatus');
+                
+                if (data.success) {
+                    statusElement.textContent = `The ${interfaceName} network interface status: ${data.status}`;
+                } else {
+                    statusElement.textContent = `The ${interfaceName} network interface status: Error - ${data.message}`;
+                }
+            } catch (error) {
+                document.getElementById('monitorStatus').textContent = `The ${interfaceName} network interface status: Error - ${error.message}`;
             }
         }
     </script>

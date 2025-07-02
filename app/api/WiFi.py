@@ -32,6 +32,9 @@ capture_process = None
 capture_file = None
 connected_clients = []
 
+# 全域網卡名稱列表
+network_adapters = []
+
 # 定義 AP 配置模型
 class APConfig(BaseModel):
     ssid: str
@@ -123,11 +126,13 @@ def read_wordlist_generator(request: Request):
         {"request": request, "message": "Wordlist Generator"}
     )
 
-@router.get("/adapter/list")
+@router.get("/interface/details")
 async def list_adapters(request: Request):
     """
     執行 ifconfig -a 命令並返回所有網路介面的詳細資訊
     """
+    global network_adapters
+    
     try:
         # 執行 ifconfig -a 命令
         result = subprocess.run(
@@ -136,36 +141,199 @@ async def list_adapters(request: Request):
         )
         
         if result.returncode == 0:
+            # 截取網卡名稱
+            network_adapters = extract_adapter_names(result.stdout)
+            
             return {
                 "success": True,
                 "output": result.stdout,
-                "message": "Network adapters listed successfully"
+                "message": "Network adapters listed successfully",
+                "adapters": network_adapters
             }
         else:
             return {
                 "success": False,
                 "message": f"Failed to execute ifconfig: {result.stderr}",
-                "output": result.stderr
+                "output": result.stderr,
+                "adapters": []
             }
             
     except subprocess.TimeoutExpired:
         return {
             "success": False,
             "message": "Command timed out",
-            "output": ""
+            "output": "",
+            "adapters": []
         }
     except FileNotFoundError:
         return {
             "success": False,
             "message": "ifconfig command not found. Please ensure net-tools is installed.",
-            "output": ""
+            "output": "",
+            "adapters": []
         }
     except Exception as e:
         return {
             "success": False,
             "message": f"Error executing ifconfig: {str(e)}",
-            "output": ""
+            "output": "",
+            "adapters": []
         }
+
+def extract_adapter_names(ifconfig_output):
+    """
+    從 ifconfig 輸出中截取網卡名稱
+    """
+    adapter_names = []
+    lines = ifconfig_output.split('\n')
+    
+    for line in lines:
+        # 網卡名稱通常在行的開頭，後面跟著冒號或空格
+        # 例如: "eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500"
+        # 或: "wlan0     Link encap:Ethernet  HWaddr"
+        if line and not line.startswith(' ') and not line.startswith('\t'):
+            # 提取網卡名稱 (在冒號或空格之前)
+            if ':' in line:
+                adapter_name = line.split(':')[0].strip()
+            else:
+                # 處理某些系統中沒有冒號的情況
+                parts = line.split()
+                if parts:
+                    adapter_name = parts[0].strip()
+                else:
+                    continue
+            
+            # 過濾掉空字串和無效名稱
+            if adapter_name and adapter_name.isalnum() or any(c in adapter_name for c in ['-', '_']):
+                adapter_names.append(adapter_name)
+    
+    return adapter_names
+
+@router.get("/interface/list")
+async def get_adapter_names():
+    """
+    返回已截取的網卡名稱列表
+    """
+    global network_adapters
+    
+    return {
+        "success": True,
+        "adapters": network_adapters,
+        "count": len(network_adapters)
+    }
+
+@router.post("/interface/monitorMode")
+async def activate_monitor_mode(request: NetworkInterfaceRequest):
+    """
+    啟用指定網路介面的監聽模式
+    """
+    try:
+        # 執行 sudo ifconfig {interface_name} up
+        up_result = subprocess.run(
+            ["sudo", "ifconfig", request.interface, "up"],
+            capture_output=True, text=True, timeout=10
+        )
+        
+        if up_result.returncode != 0:
+            return {
+                "success": False,
+                "message": f"Failed to bring up interface {request.interface}",
+                "error": up_result.stderr
+            }
+        
+        # 執行 sudo iwconfig {interface_name} mode monitor
+        monitor_result = subprocess.run(
+            ["sudo", "iwconfig", request.interface, "mode", "monitor"],
+            capture_output=True, text=True, timeout=10
+        )
+        
+        if monitor_result.returncode != 0:
+            return {
+                "success": False,
+                "message": f"Failed to set monitor mode for {request.interface}",
+                "error": monitor_result.stderr
+            }
+        
+        return {
+            "success": True,
+            "message": f"Monitor mode activated successfully for {request.interface}",
+            "interface": request.interface
+        }
+        
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "message": "Command timed out",
+            "interface": request.interface
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error activating monitor mode: {str(e)}",
+            "interface": request.interface
+        }
+
+@router.get("/interface/status")
+async def get_interface_status(interface: str):
+    """
+    取得指定網路介面的狀態，特別是其模式
+    """
+    try:
+        # 執行 iwconfig 命令
+        result = subprocess.run(
+            ["iwconfig", interface],
+            capture_output=True, text=True, timeout=10
+        )
+        
+        if result.returncode != 0:
+            return {
+                "success": False,
+                "message": f"Failed to get status for interface {interface}",
+                "error": result.stderr,
+                "interface": interface
+            }
+        
+        output = result.stdout
+        mode = "Unknown"
+        
+        # 從 iwconfig 輸出中擷取模式
+        if "Mode:Monitor" in output:
+            mode = "Monitor"
+        elif "Mode:Managed" in output:
+            mode = "Managed"
+        elif "Mode:Master" in output:
+            mode = "Master"
+        elif "Mode:Ad-Hoc" in output:
+            mode = "Ad-Hoc"
+        elif "no wireless extensions" in output.lower():
+            return {
+                "success": False,
+                "message": f"Interface {interface} is not a wireless interface",
+                "interface": interface
+            }
+        
+        return {
+            "success": True,
+            "interface": interface,
+            "mode": mode,
+            "status": f"{mode} mode",
+            "output": output
+        }
+        
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "message": "Command timed out",
+            "interface": interface
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error getting interface status: {str(e)}",
+            "interface": interface
+        }
+
+
 
 @router.post("/ap/start")
 async def start_ap(config: APConfig):
