@@ -1,5 +1,5 @@
 class PasswordGenerator:
-    def __init__(self, output_file='identity_weak_passwords.txt'):
+    def __init__(self, output_file='wordlist/identity_weak_passwords.txt'):
         self.output_file = output_file
         self.none_mean = ['123', '1234', '8888', '8787', '6666', '666', '168', '1111']
         self.special = ['!', '#', '$', '@', '']
