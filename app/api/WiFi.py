@@ -342,8 +342,15 @@ async def get_interface_status(interface: str):
 @router.post("/ap/scan")
 async def scan_wifi(request: ScanWifiRequest):
     try:
-        # 使用 ap_scan 模組進行掃描
-        nearby_ap = scan_wifi_networks(request.interface, request.timeout)
+        # 使用 asyncio 在執行緒池中運行掃描，避免阻塞事件循環
+        loop = asyncio.get_event_loop()
+        nearby_ap = await loop.run_in_executor(
+            None, 
+            scan_wifi_networks, 
+            request.interface, 
+            request.timeout
+        )
+        
         return {
             "success": True,
             "ap_list": nearby_ap,
@@ -464,14 +471,15 @@ async def stop_capture():
                 "message": "No capture is currently running"
             }
         
-        # 終止捕獲進程
+        # 終止捕獲進程 (asyncio 子進程)
         capture_process.terminate()
         
         # 等待進程結束
         try:
-            capture_process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
+            await asyncio.wait_for(capture_process.wait(), timeout=5.0)
+        except asyncio.TimeoutError:
             capture_process.kill()
+            await capture_process.wait()
         
         capture_active = False
         capture_process = None
@@ -492,15 +500,16 @@ async def run_capture_process(command, output_path):
     
     try:
         capture_active = True
-        capture_process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            preexec_fn=os.setsid
+        
+        # 使用 asyncio.create_subprocess_exec 創建異步子進程
+        capture_process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
         
-        # 等待進程完成或被終止
-        capture_process.wait()
+        # 異步等待進程完成或被終止
+        await capture_process.wait()
         
     except Exception as e:
         print(f"Capture process error: {e}")

@@ -194,6 +194,10 @@
             scanResults.style.display = 'none';
 
             try {
+                // 設定 fetch 超時控制器
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 30秒超時
+                
                 const response = await fetch('/WiFi/ap/scan', {
                     method: 'POST',
                     headers: {
@@ -201,9 +205,12 @@
                     },
                     body: JSON.stringify({
                         interface: selectedInterface,
-                        timeout: 3
-                    })
+                        timeout: 5  // 增加掃描時間到15秒
+                    }),
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
                 
                 const data = await response.json();
                 
@@ -213,7 +220,11 @@
                     throw new Error(data.message || 'Failed to scan networks');
                 }
             } catch (error) {
-                alert(`Network scan failed: ${error.message}`);
+                if (error.name === 'AbortError') {
+                    alert('Network scan timed out (30 seconds). Please try again.');
+                } else {
+                    alert(`Network scan failed: ${error.message}`);
+                }
                 scanResults.style.display = 'none';
             } finally {
                 // 恢復掃描按鈕
@@ -310,6 +321,9 @@
             channelStatus.textContent = 'Status: Setting channel...';
 
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
+                
                 const response = await fetch('/WiFi/interface/channel', {
                     method: 'POST',
                     headers: {
@@ -318,8 +332,11 @@
                     body: JSON.stringify({
                         interface: selectedInterface,
                         channel: targetChannel
-                    })
+                    }),
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
                 
                 const data = await response.json();
                 
@@ -329,7 +346,11 @@
                     channelStatus.textContent = `Status: Failed to set channel - ${data.message}`;
                 }
             } catch (error) {
-                channelStatus.textContent = `Status: Error - ${error.message}`;
+                if (error.name === 'AbortError') {
+                    channelStatus.textContent = 'Status: Channel setting timed out';
+                } else {
+                    channelStatus.textContent = `Status: Error - ${error.message}`;
+                }
             }
         }
 
@@ -354,6 +375,9 @@
             captureStatus.textContent = 'Status: Starting capture...';
 
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
+                
                 const response = await fetch('/WiFi/capture/start', {
                     method: 'POST',
                     headers: {
@@ -364,8 +388,11 @@
                         bssid: targetBSSID,
                         channel: parseInt(targetChannel),
                         output_file: 'capture'
-                    })
+                    }),
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
                 
                 const data = await response.json();
                 
@@ -379,7 +406,11 @@
             } catch (error) {
                 startButton.disabled = false;
                 stopButton.disabled = true;
-                captureStatus.textContent = `Status: Error - ${error.message}`;
+                if (error.name === 'AbortError') {
+                    captureStatus.textContent = 'Status: Capture start timed out';
+                } else {
+                    captureStatus.textContent = `Status: Error - ${error.message}`;
+                }
             }
         }
 
@@ -391,12 +422,18 @@
             captureStatus.textContent = 'Status: Stopping capture...';
 
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
+                
                 const response = await fetch('/WiFi/capture/stop', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
                 
                 const data = await response.json();
                 
@@ -406,7 +443,11 @@
                     captureStatus.textContent = `Status: Failed to stop capture - ${data.message}`;
                 }
             } catch (error) {
-                captureStatus.textContent = `Status: Error - ${error.message}`;
+                if (error.name === 'AbortError') {
+                    captureStatus.textContent = 'Status: Capture stop timed out';
+                } else {
+                    captureStatus.textContent = `Status: Error - ${error.message}`;
+                }
             } finally {
                 // 恢復按鈕狀態
                 startButton.disabled = false;
