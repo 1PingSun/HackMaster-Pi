@@ -44,12 +44,12 @@
             </div>
         </div>
 
-        <h1>4. Prepare to Crack the Target</h1>
+        <h1>4. Set Channel for Target</h1>
         <select id="targetSelect">
             <option value="">-- Select a target --</option>
         </select>
-        <button onclick="prepareTarget()">Start Preparing</button>
-        <p id="prepareStatus">Status: </p>
+        <button onclick="setChannel()">Set Channel</button>
+        <p id="channelStatus">Status: </p>
 
     </div>
 
@@ -281,7 +281,7 @@
             });
         }
 
-        async function prepareTarget() {
+        async function setChannel() {
             const targetSelect = document.getElementById('targetSelect');
             const selectedIndex = targetSelect.value;
             
@@ -301,8 +301,8 @@
             targetBSSID = selectedTarget.BSSID;
             targetESSID = selectedTarget.ESSID || '<hidden>';
 
-            const prepareStatus = document.getElementById('prepareStatus');
-            prepareStatus.textContent = 'Status: Setting channel...';
+            const channelStatus = document.getElementById('channelStatus');
+            channelStatus.textContent = 'Status: Setting channel...';
 
             try {
                 const response = await fetch('/WiFi/interface/channel', {
@@ -319,12 +319,12 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    prepareStatus.textContent = `Status: Ready to attack ${targetESSID} on channel ${targetChannel}`;
+                    channelStatus.textContent = `Status: Channel ${targetChannel} set for ${targetESSID}`;
                 } else {
-                    prepareStatus.textContent = `Status: Failed to set channel - ${data.message}`;
+                    channelStatus.textContent = `Status: Failed to set channel - ${data.message}`;
                 }
             } catch (error) {
-                prepareStatus.textContent = `Status: Error - ${error.message}`;
+                channelStatus.textContent = `Status: Error - ${error.message}`;
             }
         }
     </script>
