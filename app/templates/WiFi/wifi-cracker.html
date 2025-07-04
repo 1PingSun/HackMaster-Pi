@@ -55,7 +55,13 @@
         <button id="startCaptureButton" onclick="startCapture()">Start Capturing</button>
         <p id="captureStatus"></p>
 
-        <h1>6. Stop Capture</h1>
+        <h1>6. Send Deauth Packets</h1>
+        <label for="packetCount">Number of packets:</label>
+        <input type="number" id="packetCount" value="10" min="1" max="100" style="width: 80px;">
+        <button id="sendDeauthButton" onclick="sendDeauthPackets()">Send Deauth Packets</button>
+        <p id="deauthStatus"></p>
+
+        <h1>7. Stop Capture</h1>
         <button id="stopCaptureButton" onclick="stopCapture()" disabled>Stop Capturing</button>
         <p id="stopCaptureStatus"></p>
 
@@ -463,6 +469,73 @@
                 }
                 stopButton.disabled = false;
                 stopButton.textContent = 'Stop Capturing';
+            }
+        }
+
+        async function sendDeauthPackets() {
+            if (!selectedInterface) {
+                alert('Please select a network interface first');
+                return;
+            }
+
+            if (!targetBSSID) {
+                alert('Please select a target network first');
+                return;
+            }
+
+            const deauthButton = document.getElementById('sendDeauthButton');
+            const deauthStatus = document.getElementById('deauthStatus');
+            const packetCount = document.getElementById('packetCount').value;
+
+            // 驗證封包數量
+            const packets = parseInt(packetCount);
+            if (isNaN(packets) || packets < 1 || packets > 100) {
+                alert('Please enter a valid packet count (1-100)');
+                return;
+            }
+
+            // 更新按鈕狀態
+            deauthButton.disabled = true;
+            deauthButton.textContent = 'Sending...';
+            deauthStatus.textContent = `Sending ${packets} deauth packets to ${targetESSID}...`;
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 45000); // 45秒超時
+                
+                const response = await fetch('/WiFi/deauth/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        interface: selectedInterface,
+                        bssid: targetBSSID,
+                        packets: packets,
+                        broadcast: true
+                    }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    deauthStatus.textContent = `Successfully sent ${data.packets_sent} deauth packets to ${targetESSID}`;
+                } else {
+                    deauthStatus.textContent = `Failed to send deauth packets - ${data.message}`;
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    deauthStatus.textContent = 'Deauth sending timed out';
+                } else {
+                    deauthStatus.textContent = `Error - ${error.message}`;
+                }
+            } finally {
+                // 恢復按鈕狀態
+                deauthButton.disabled = false;
+                deauthButton.textContent = 'Send Deauth Packets';
             }
         }
     </script>

