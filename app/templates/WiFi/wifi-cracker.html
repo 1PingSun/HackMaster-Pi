@@ -61,24 +61,28 @@
         <button id="sendDeauthButton" onclick="sendDeauthPackets()">Send Deauth Packets</button>
         <p id="deauthStatus"></p>
 
-        <h1>7. Check Handshakes</h1>
-        <button id="checkHandshakeButton" onclick="checkHandshakes()">Check Handshakes</button>
-        <p id="handshakeStatus"></p>
-        <div id="handshakeResults" style="display: none;">
-            <h3>Handshake Analysis:</h3>
-            <table id="handshakeTable" border="1">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>BSSID</th>
-                        <th>ESSID</th>
-                        <th>Encryption</th>
-                        <th>Handshakes</th>
-                    </tr>
-                </thead>
-                <tbody id="handshakeTableBody">
-                </tbody>
-            </table>
+        <div id="step7" style="display: none;">
+            <h4>Step 7: Check Handshakes</h4>
+            <p>Check captured packets for WPA handshakes.</p>
+            <button id="checkHandshakeButton" onclick="checkHandshakes()">Check Handshakes</button>
+            <button id="listCaptureFilesButton" onclick="listCaptureFiles()" style="margin-left: 10px;">List Capture Files</button>
+            <div id="handshakeStatus" style="margin-top: 10px; padding: 10px; background-color: #2a2a2a; border-radius: 4px;"></div>
+            <div id="captureFilesList" style="margin-top: 10px; display: none;"></div>
+            <div id="handshakeResults" style="margin-top: 20px; display: none;">
+                <h5>Handshake Analysis Results:</h5>
+                <table id="handshakeTable" class="table">
+                    <thead>
+                        <tr>
+                            <th>BSSID</th>
+                            <th>ESSID</th>
+                            <th>Encryption</th>
+                            <th>Handshakes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="handshakeTableBody">
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <h1>8. Stop Capture</h1>
@@ -570,6 +574,24 @@
             handshakeResults.style.display = 'none';
 
             try {
+                // 首先列出可用的 capture 檔案
+                let captureFile = 'capture-01.cap';  // 預設檔名
+                
+                try {
+                    const listResponse = await fetch('/WiFi/capture/list');
+                    const listData = await listResponse.json();
+                    
+                    if (listData.success && listData.files.length > 0) {
+                        // 使用最新的檔案
+                        captureFile = listData.files[0].filename;
+                        handshakeStatus.textContent = `Found capture file: ${captureFile}, analyzing for handshakes...`;
+                    } else {
+                        handshakeStatus.textContent = 'No capture files found, using default filename...';
+                    }
+                } catch (error) {
+                    console.log('Failed to list capture files, using default filename');
+                }
+                
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 45000); // 45秒超時
                 
@@ -579,7 +601,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        capture_file: 'capture-01.cap'  // 使用固定檔名
+                        capture_file: captureFile
                     }),
                     signal: controller.signal
                 });
@@ -660,4 +682,47 @@
             
             handshakeResults.style.display = 'block';
         }
+
+        async function listCaptureFiles() {
+            const listButton = document.getElementById('listCaptureFilesButton');
+            const captureFilesList = document.getElementById('captureFilesList');
+
+            // 更新按鈕狀態
+            listButton.disabled = true;
+            listButton.textContent = 'Listing...';
+
+            try {
+                const response = await fetch('/WiFi/capture/list');
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.files.length > 0) {
+                        let fileListHtml = '<h5>Available Capture Files:</h5><ul>';
+                        data.files.forEach(file => {
+                            const modifiedDate = new Date(file.modified * 1000).toLocaleString();
+                            const sizeKB = (file.size / 1024).toFixed(2);
+                            fileListHtml += `<li><strong>${file.filename}</strong> - ${sizeKB} KB - Modified: ${modifiedDate}</li>`;
+                        });
+                        fileListHtml += '</ul>';
+                        captureFilesList.innerHTML = fileListHtml;
+                        captureFilesList.style.display = 'block';
+                    } else {
+                        captureFilesList.innerHTML = '<p>No capture files found.</p>';
+                        captureFilesList.style.display = 'block';
+                    }
+                } else {
+                    captureFilesList.innerHTML = `<p>Error: ${data.message}</p>`;
+                    captureFilesList.style.display = 'block';
+                }
+            } catch (error) {
+                captureFilesList.innerHTML = `<p>Failed to list capture files: ${error.message}</p>`;
+                captureFilesList.style.display = 'block';
+            } finally {
+                // 恢復按鈕狀態
+                listButton.disabled = false;
+                listButton.textContent = 'List Capture Files';
+            }
+        }
     </script>
+</body>
+</html>

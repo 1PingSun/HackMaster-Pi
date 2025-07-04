@@ -106,7 +106,7 @@ class ChannelRequest(BaseModel):
 
 # 定義檢查握手包請求模型
 class HandshakeCheckRequest(BaseModel):
-    capture_file: Optional[str] = "capture-01.cap"  # 預設使用固定檔名
+    capture_file: Optional[str] = "capture-01.cap"  # airodump-ng 會自動加上 -01
 
 @router.get("/ap-emulator", response_class=HTMLResponse)
 def read_ap_emulator(request: Request):
@@ -432,22 +432,23 @@ async def start_capture(request: CaptureRequest, background_tasks: BackgroundTas
         os.makedirs("data/captures", exist_ok=True)
         output_path = os.path.join("data/captures", output_file)
         
-        # 刪除舊的捕獲文件（如果存在）
-        old_files = [
-            f"{output_path}.cap",
-            f"{output_path}-01.cap",
-            f"{output_path}-01.csv",
-            f"{output_path}-01.kismet.csv",
-            f"{output_path}-01.log.csv"
+        # 刪除舊的捕獲文件（airodump-ng 會自動加上 -01、-02 等後綴）
+        import glob
+        old_file_patterns = [
+            f"{output_path}*.cap",
+            f"{output_path}*.csv",
+            f"{output_path}*.kismet.csv",
+            f"{output_path}*.log.csv"
         ]
         
-        for old_file in old_files:
-            try:
-                if os.path.exists(old_file):
-                    os.remove(old_file)
-                    print(f"Removed old capture file: {old_file}")
-            except Exception as e:
-                print(f"Failed to remove old file {old_file}: {e}")
+        for pattern in old_file_patterns:
+            for old_file in glob.glob(pattern):
+                try:
+                    if os.path.exists(old_file):
+                        os.remove(old_file)
+                        print(f"Removed old capture file: {old_file}")
+                except Exception as e:
+                    print(f"Failed to remove old file {old_file}: {e}")
         
         # 使用 airodump-ng 開始捕獲流量
         # 指令範例：sudo airodump-ng -c 7 --bssid BO:BE:76:CD:97:24 -w capture wlan1
@@ -465,7 +466,7 @@ async def start_capture(request: CaptureRequest, background_tasks: BackgroundTas
         return {
             "success": True,
             "message": "Traffic capture started",
-            "capture_file": "capture.cap",
+            "capture_file": "capture-01.cap",  # airodump-ng 會自動產生 -01 後綴
             "command": " ".join(capture_command)
         }
     except Exception as e:
@@ -538,10 +539,35 @@ async def check_handshake(request: HandshakeCheckRequest):
     檢查捕獲文件中的握手包數量
     """
     try:
-        # 構建 capture 文件的完整路徑
+        # 如果指定的檔案不存在，嘗試自動偵測最新的 capture 檔案
         capture_path = os.path.join("data/captures", request.capture_file)
         
-        # 檢查文件是否存在
+        if not os.path.exists(capture_path):
+            # 嘗試尋找最新的 capture 檔案
+            import glob
+            capture_dir = "data/captures"
+            if os.path.exists(capture_dir):
+                capture_files = glob.glob(os.path.join(capture_dir, "capture*.cap"))
+                if capture_files:
+                    # 按修改時間排序，取最新的
+                    capture_path = max(capture_files, key=os.path.getmtime)
+                    request.capture_file = os.path.basename(capture_path)
+                else:
+                    return {
+                        "success": False,
+                        "message": f"No capture files found in {capture_dir}",
+                        "handshakes": 0,
+                        "networks": []
+                    }
+            else:
+                return {
+                    "success": False,
+                    "message": f"Capture directory not found: {capture_dir}",
+                    "handshakes": 0,
+                    "networks": []
+                }
+        
+        # 再次確認文件是否存在
         if not os.path.exists(capture_path):
             return {
                 "success": False,
@@ -775,3 +801,48 @@ async def generate_wordlist(request: WordlistRequest):
             "success": False,
             "error": str(e)
         })
+
+@router.get("/capture/list")
+async def list_capture_files():
+    """
+    列出可用的捕獲檔案
+    """
+    try:
+        capture_dir = "data/captures"
+        
+        if not os.path.exists(capture_dir):
+            return {
+                "success": True,
+                "message": "No capture directory found",
+                "files": []
+            }
+        
+        import glob
+        capture_files = glob.glob(os.path.join(capture_dir, "capture*.cap"))
+        
+        files_info = []
+        for file_path in capture_files:
+            file_stat = os.stat(file_path)
+            files_info.append({
+                "filename": os.path.basename(file_path),
+                "size": file_stat.st_size,
+                "modified": file_stat.st_mtime,
+                "path": file_path
+            })
+        
+        # 按修改時間排序（最新的在前）
+        files_info.sort(key=lambda x: x['modified'], reverse=True)
+        
+        return {
+            "success": True,
+            "message": f"Found {len(files_info)} capture file(s)",
+            "files": files_info,
+            "capture_dir": capture_dir
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error listing capture files: {str(e)}",
+            "files": []
+        }
