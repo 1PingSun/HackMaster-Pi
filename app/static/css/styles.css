@@ -1471,79 +1471,6 @@ textarea:focus {
     border-radius: 5px;
 }
 
-.terminal-output::-webkit-scrollbar {
-    width: 8px;
-}
-
-.terminal-output::-webkit-scrollbar-track {
-    background: #0a0a12;
-}
-
-.terminal-output::-webkit-scrollbar-thumb {
-    background: #444;
-    border-radius: 4px;
-}
-
-.progress-container {
-    height: 20px;
-    background-color: #222;
-    border-radius: 10px;
-    margin: 20px 0;
-    overflow: hidden;
-    border: 1px solid #444;
-}
-
-.progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #5a84ff, #34c759);
-    text-align: center;
-    line-height: 20px;
-    color: #fff;
-    font-weight: bold;
-    transition: width 0.5s ease-in-out;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-}
-
-.result-card {
-    background-color: rgba(90, 132, 255, 0.1);
-    border: 1px solid #5a84ff;
-    border-radius: 5px;
-    margin: 15px 0;
-    overflow: hidden;
-}
-
-.result-title {
-    background-color: rgba(90, 132, 255, 0.2);
-    padding: 10px;
-    border-bottom: 1px solid #5a84ff;
-}
-
-.result-title h3 {
-    margin: 0;
-    color: #5a84ff;
-}
-
-.status {
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 5px;
-    background-color: rgba(90, 132, 255, 0.1);
-}
-
-.status.error {
-    background-color: rgba(255, 59, 48, 0.1);
-    color: #ff5146;
-}
-
-.advanced-options {
-    background-color: rgba(90, 132, 255, 0.05);
-    padding: 15px;
-    border-radius: 5px;
-    margin: 10px 0;
-    border: 1px dashed #5a84ff;
-}
-
-/* WiFi Cracker 專用樣式 */
 .wifi-cracker-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -1718,127 +1645,80 @@ textarea:focus {
 .wifi-networks-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
     background-color: #292942;
-    border-radius: 5px;
+    border-radius: 0; /* 移除圓角，由容器處理 */
     overflow: hidden;
+    min-width: 600px; /* 確保表格最小寬度 */
 }
 
-.wifi-networks-table th,
-.wifi-networks-table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #323259;
-    font-family: 'VT323', monospace;
-    font-size: 16px;
+.wifi-table-container {
+    overflow-x: auto;
+    overflow-y: visible;
+    border-radius: 5px;
+    border: 1px solid #323259;
+    margin-top: 15px;
+    -webkit-overflow-scrolling: touch; /* iOS 流暢滑動 */
 }
 
-.wifi-networks-table th {
-    background-color: #1e1e2f;
+/* 為小螢幕優化表格 */
+@media (max-width: 768px) {
+    .wifi-table-container {
+        margin: 15px -10px 0 -10px; /* 稍微延伸到邊緣 */
+    }
+    
+    .wifi-networks-table {
+        min-width: 500px;
+        font-size: 14px;
+    }
+    
+    .wifi-networks-table th,
+    .wifi-networks-table td {
+        padding: 8px;
+        white-space: nowrap;
+    }
+    
+    .wifi-networks-table th:first-child,
+    .wifi-networks-table td:first-child {
+        position: sticky;
+        left: 0;
+        background-color: #1e1e2f;
+        z-index: 2;
+        border-right: 1px solid #323259;
+    }
+    
+    .wifi-networks-table th:first-child {
+        background-color: #1e1e2f;
+    }
+}
+
+@media (max-width: 480px) {
+    .wifi-table-container {
+        margin: 15px -15px 0 -15px;
+    }
+    
+    .wifi-networks-table {
+        min-width: 450px;
+        font-size: 12px;
+    }
+    
+    .wifi-networks-table th,
+    .wifi-networks-table td {
+        padding: 6px;
+    }
+}
+
+/* 滑動提示 */
+.scroll-hint {
+    text-align: center;
     color: #5a84ff;
-    font-weight: bold;
-}
-
-.wifi-networks-table tr:hover {
-    background-color: rgba(90, 132, 255, 0.1);
-}
-
-.wifi-networks-table tr:last-child td {
-    border-bottom: none;
-}
-
-.loading-indicator {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #5a84ff;
+    font-size: 14px;
+    margin-top: 10px;
+    opacity: 0.8;
     font-style: italic;
 }
 
-.loading-indicator::before {
-    content: '⏳';
-    animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-.result-box {
-    padding: 20px;
-    border-radius: 8px;
-    margin-top: 15px;
-    font-family: 'VT323', monospace;
-}
-
-.result-box.success {
-    background-color: rgba(0, 255, 179, 0.1);
-    border: 2px solid #00ffb3;
-    color: #00ffb3;
-}
-
-.result-box.error {
-    background-color: rgba(255, 58, 76, 0.1);
-    border: 2px solid #ff3a4c;
-    color: #ff3a4c;
-}
-
-.result-box h5 {
-    margin-top: 0;
-    font-size: 1.2em;
-}
-
-.result-box code {
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-family: 'VT323', monospace;
-}
-
-.terminal-output {
-    background-color: #1a1a1a;
-    border: 1px solid #323259;
-    border-radius: 5px;
-    padding: 15px;
-    margin-top: 15px;
-    font-family: 'VT323', monospace;
-    font-size: 16px;
-    color: #00ffb3;
-    white-space: pre-wrap;
-    overflow-x: auto;
-}
-
-.wordlist-section {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    align-items: center;
-    margin-top: 15px;
-}
-
-.wordlist-section label {
-    color: #5a84ff;
-    font-size: 1.1em;
-    margin-bottom: 0;
-}
-
-.step-indicator {
-    display: inline-block;
-    background-color: #5a84ff;
-    color: #0f0f17;
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-size: 14px;
-    font-weight: bold;
-    margin-right: 10px;
-}
-
-.step-indicator.completed {
-    background-color: #00ffb3;
-}
-
-.step-indicator.active {
-    background-color: #5a84ff;
-    animation: pulse 2s infinite;
+@media (min-width: 769px) {
+    .scroll-hint {
+        display: none;
+    }
 }
