@@ -869,7 +869,7 @@ async def list_wordlists():
 @router.delete("/wordlists/custom/{filename}")
 async def delete_custom_wordlist(filename: str):
     """
-    刪除指定的自定義密碼字典檔案
+    刪除指定的自定義密碼字典檔案（僅限 custom 目錄）
     """
     try:
         # 安全檢查：確保檔案名稱只包含安全字符
@@ -880,7 +880,15 @@ async def delete_custom_wordlist(filename: str):
                 "message": "Invalid filename format"
             }
         
+        # 確保只能刪除 custom 目錄中的檔案
         file_path = os.path.join("static/wordlists", filename)
+        
+        # 檢查檔案路徑是否在 standard 目錄中
+        if "standard" in filename or os.path.exists(os.path.join("static/wordlists/standard", filename)):
+            return {
+                "success": False,
+                "message": "Cannot delete standard wordlist files"
+            }
         
         # 檢查檔案是否存在
         if not os.path.exists(file_path):
