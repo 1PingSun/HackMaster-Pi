@@ -61,28 +61,26 @@
         <button id="sendDeauthButton" onclick="sendDeauthPackets()">Send Deauth Packets</button>
         <p id="deauthStatus"></p>
 
-        <div id="step7" style="display: none;">
-            <h4>Step 7: Check Handshakes</h4>
-            <p>Check captured packets for WPA handshakes.</p>
-            <button id="checkHandshakeButton" onclick="checkHandshakes()">Check Handshakes</button>
-            <button id="listCaptureFilesButton" onclick="listCaptureFiles()" style="margin-left: 10px;">List Capture Files</button>
-            <div id="handshakeStatus" style="margin-top: 10px; padding: 10px; background-color: #2a2a2a; border-radius: 4px;"></div>
-            <div id="captureFilesList" style="margin-top: 10px; display: none;"></div>
-            <div id="handshakeResults" style="margin-top: 20px; display: none;">
-                <h5>Handshake Analysis Results:</h5>
-                <table id="handshakeTable" class="table">
-                    <thead>
-                        <tr>
-                            <th>BSSID</th>
-                            <th>ESSID</th>
-                            <th>Encryption</th>
-                            <th>Handshakes</th>
-                        </tr>
-                    </thead>
-                    <tbody id="handshakeTableBody">
-                    </tbody>
-                </table>
-            </div>
+        <h4>Step 7: Check Handshakes</h4>
+        <p>Check captured packets for WPA handshakes.</p>
+        <button id="checkHandshakeButton" onclick="checkHandshakes()">Check Handshakes</button>
+        <button id="listCaptureFilesButton" onclick="listCaptureFiles()" style="margin-left: 10px;">List Capture Files</button>
+        <div id="handshakeStatus" style="margin-top: 10px; padding: 10px; background-color: #2a2a2a; border-radius: 4px;"></div>
+        <div id="captureFilesList" style="margin-top: 10px; display: none;"></div>
+        <div id="handshakeResults" style="margin-top: 20px; display: none;">
+            <h5>Handshake Analysis Results:</h5>
+            <table id="handshakeTable" class="table">
+                <thead>
+                    <tr>
+                        <th>BSSID</th>
+                        <th>ESSID</th>
+                        <th>Encryption</th>
+                        <th>Handshakes</th>
+                    </tr>
+                </thead>
+                <tbody id="handshakeTableBody">
+                </tbody>
+            </table>
         </div>
 
         <h1>8. Stop Capture</h1>

@@ -437,7 +437,7 @@ async def start_capture(request: CaptureRequest, background_tasks: BackgroundTas
         old_file_patterns = [
             f"{output_path}*.cap",
             f"{output_path}*.csv",
-            f"{output_path}*.kismet.csv",
+            f"{output_path}*.kismet*",
             f"{output_path}*.log.csv"
         ]
         
