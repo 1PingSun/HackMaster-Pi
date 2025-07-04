@@ -44,10 +44,22 @@
             </div>
         </div>
 
+        <h1>4. Prepare to Crack the Target</h1>
+        <select id="targetSelect">
+            <option value="">-- Select a target --</option>
+        </select>
+        <button onclick="prepareTarget()">Start Preparing</button>
+        <p id="prepareStatus">Status: </p>
+
     </div>
 
     <script>
         let selectedInterface = '';
+        let scannedNetworks = [];
+        let selectedTarget = null;
+        let targetChannel = null;
+        let targetBSSID = null;
+        let targetESSID = null;
 
         async function listAdapters() {
             try {
@@ -210,6 +222,9 @@
             const scanResults = document.getElementById('scanResults');
             const tableBody = document.getElementById('networksTableBody');
             
+            // 儲存掃描結果
+            scannedNetworks = networks;
+            
             // 清空表格內容
             tableBody.innerHTML = '';
             
@@ -243,6 +258,73 @@
                 });
             }
             
+            // 更新目標選擇器
+            updateTargetSelect(networks);
+            
             scanResults.style.display = 'block';
+        }
+
+        function updateTargetSelect(networks) {
+            const targetSelect = document.getElementById('targetSelect');
+            
+            // 清空現有選項
+            targetSelect.innerHTML = '<option value="">-- Select a target --</option>';
+            
+            // 添加網路選項
+            networks.forEach((network, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                const essid = network.ESSID || '<hidden>';
+                const bssid = network.BSSID || 'Unknown';
+                option.textContent = `${essid} (${bssid})`;
+                targetSelect.appendChild(option);
+            });
+        }
+
+        async function prepareTarget() {
+            const targetSelect = document.getElementById('targetSelect');
+            const selectedIndex = targetSelect.value;
+            
+            if (!selectedIndex) {
+                alert('Please select a target network first');
+                return;
+            }
+
+            if (!selectedInterface) {
+                alert('Please select a network interface first');
+                return;
+            }
+
+            // 獲取選中的目標
+            selectedTarget = scannedNetworks[selectedIndex];
+            targetChannel = selectedTarget.CH;
+            targetBSSID = selectedTarget.BSSID;
+            targetESSID = selectedTarget.ESSID || '<hidden>';
+
+            const prepareStatus = document.getElementById('prepareStatus');
+            prepareStatus.textContent = 'Status: Setting channel...';
+
+            try {
+                const response = await fetch('/WiFi/interface/channel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        interface: selectedInterface,
+                        channel: targetChannel
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    prepareStatus.textContent = `Status: Ready to attack ${targetESSID} on channel ${targetChannel}`;
+                } else {
+                    prepareStatus.textContent = `Status: Failed to set channel - ${data.message}`;
+                }
+            } catch (error) {
+                prepareStatus.textContent = `Status: Error - ${error.message}`;
+            }
         }
     </script>

@@ -99,6 +99,11 @@ class WordlistRequest(BaseModel):
     output_filename: str
     info_data: Dict[str, List[str]]
 
+# 定義頻道設定請求模型
+class ChannelRequest(BaseModel):
+    interface: str
+    channel: str
+
 @router.get("/ap-emulator", response_class=HTMLResponse)
 def read_ap_emulator(request: Request):
     return templates.TemplateResponse(
@@ -352,6 +357,47 @@ async def scan_wifi(request: ScanWifiRequest):
             "ap_list": [],
             "interface": request.interface,
             "count": 0
+        }
+    
+@router.post('/interface/channel')
+async def set_interface_channel(request: ChannelRequest):
+    """
+    設定指定網路介面的頻道
+    """
+    try:
+        # 執行 sudo iwconfig {interface_name} channel {channel}
+        result = subprocess.run(
+            ["sudo", "iwconfig", request.interface, "channel", request.channel],
+            capture_output=True, text=True, timeout=10
+        )
+        
+        if result.returncode != 0:
+            return {
+                "success": False,
+                "message": f"Failed to set channel {request.channel} for {request.interface}",
+                "error": result.stderr
+            }
+        
+        return {
+            "success": True,
+            "message": f"Channel {request.channel} set successfully for {request.interface}",
+            "interface": request.interface,
+            "channel": request.channel
+        }
+        
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "message": "Command timed out",
+            "interface": request.interface,
+            "channel": request.channel
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error setting channel: {str(e)}",
+            "interface": request.interface,
+            "channel": request.channel
         }
 
 @router.post("/ap/start")
