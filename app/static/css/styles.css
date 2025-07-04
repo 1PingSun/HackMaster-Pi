@@ -1542,3 +1542,303 @@ textarea:focus {
     margin: 10px 0;
     border: 1px dashed #5a84ff;
 }
+
+/* WiFi Cracker 專用樣式 */
+.wifi-cracker-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.wifi-cracker-section {
+    background-color: #1e1e2f;
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 25px;
+    border: 1px solid #323259;
+    position: relative;
+    overflow: hidden;
+}
+
+.wifi-cracker-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: #00ffb3;
+    z-index: 1;
+    opacity: 0.8;
+}
+
+.wifi-cracker-section h1 {
+    color: #5a84ff;
+    font-size: 1.8em;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #323259;
+    padding-bottom: 10px;
+    text-shadow: 0 0 10px rgba(90, 132, 255, 0.5);
+}
+
+.wifi-cracker-section.completed::before {
+    background: #00ffb3;
+}
+
+.wifi-cracker-section.active::before {
+    background: #5a84ff;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+.wifi-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.wifi-button {
+    background-color: transparent;
+    color: #5a84ff;
+    border: 2px solid #5a84ff;
+    padding: 12px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.wifi-button:hover {
+    background-color: #5a84ff;
+    color: #0f0f17;
+    box-shadow: 0 0 15px rgba(90, 132, 255, 0.5);
+}
+
+.wifi-button:disabled {
+    background-color: transparent;
+    color: #666;
+    border-color: #666;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.wifi-button.success {
+    border-color: #00ffb3;
+    color: #00ffb3;
+}
+
+.wifi-button.success:hover {
+    background-color: #00ffb3;
+    color: #0f0f17;
+}
+
+.wifi-button.danger {
+    border-color: #ff3a4c;
+    color: #ff3a4c;
+}
+
+.wifi-button.danger:hover {
+    background-color: #ff3a4c;
+    color: #0f0f17;
+}
+
+.wifi-select {
+    background-color: #1e1e2f;
+    border: 1px solid #323259;
+    color: #c7d3e3;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    min-width: 200px;
+}
+
+.wifi-select:focus {
+    border-color: #5a84ff;
+    box-shadow: 0 0 10px rgba(90, 132, 255, 0.3);
+    outline: none;
+}
+
+.wifi-input {
+    background-color: #1e1e2f;
+    border: 1px solid #323259;
+    color: #c7d3e3;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    width: 100px;
+}
+
+.wifi-input:focus {
+    border-color: #5a84ff;
+    box-shadow: 0 0 10px rgba(90, 132, 255, 0.3);
+    outline: none;
+}
+
+.wifi-status {
+    background-color: #292942;
+    border: 1px solid #323259;
+    border-radius: 5px;
+    padding: 15px;
+    margin-top: 15px;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: #c7d3e3;
+}
+
+.wifi-status.success {
+    background-color: rgba(0, 255, 179, 0.1);
+    border-color: #00ffb3;
+    color: #00ffb3;
+}
+
+.wifi-status.error {
+    background-color: rgba(255, 58, 76, 0.1);
+    border-color: #ff3a4c;
+    color: #ff3a4c;
+}
+
+.wifi-status.info {
+    background-color: rgba(90, 132, 255, 0.1);
+    border-color: #5a84ff;
+    color: #5a84ff;
+}
+
+.wifi-networks-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background-color: #292942;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.wifi-networks-table th,
+.wifi-networks-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #323259;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+}
+
+.wifi-networks-table th {
+    background-color: #1e1e2f;
+    color: #5a84ff;
+    font-weight: bold;
+}
+
+.wifi-networks-table tr:hover {
+    background-color: rgba(90, 132, 255, 0.1);
+}
+
+.wifi-networks-table tr:last-child td {
+    border-bottom: none;
+}
+
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #5a84ff;
+    font-style: italic;
+}
+
+.loading-indicator::before {
+    content: '⏳';
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.result-box {
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 15px;
+    font-family: 'VT323', monospace;
+}
+
+.result-box.success {
+    background-color: rgba(0, 255, 179, 0.1);
+    border: 2px solid #00ffb3;
+    color: #00ffb3;
+}
+
+.result-box.error {
+    background-color: rgba(255, 58, 76, 0.1);
+    border: 2px solid #ff3a4c;
+    color: #ff3a4c;
+}
+
+.result-box h5 {
+    margin-top: 0;
+    font-size: 1.2em;
+}
+
+.result-box code {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'VT323', monospace;
+}
+
+.terminal-output {
+    background-color: #1a1a1a;
+    border: 1px solid #323259;
+    border-radius: 5px;
+    padding: 15px;
+    margin-top: 15px;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: #00ffb3;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+.wordlist-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.wordlist-section label {
+    color: #5a84ff;
+    font-size: 1.1em;
+    margin-bottom: 0;
+}
+
+.step-indicator {
+    display: inline-block;
+    background-color: #5a84ff;
+    color: #0f0f17;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 14px;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.step-indicator.completed {
+    background-color: #00ffb3;
+}
+
+.step-indicator.active {
+    background-color: #5a84ff;
+    animation: pulse 2s infinite;
+}

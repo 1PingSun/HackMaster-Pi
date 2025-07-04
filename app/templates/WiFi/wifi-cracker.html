@@ -8,84 +8,132 @@
     <meta name="theme-color" content="#0f0f17">
 </head>
 <body>
-    <div class="container">
-        <h1>1. List Adapter</h1>
-        
-        <button onclick="listAdapters()">List Adapters</button>
-        <div id="adapterResponse"></div>
+    <div class="wifi-cracker-container">
+        <div class="header-container">
+            <a href="/" class="back-button">← Back</a>
+            <h1>Wi-Fi Password Cracker</h1>
+        </div>
 
-        <h1>2. Activate Monitor Mode</h1>
-        <select id="interfaceSelect">
-            <option value="">-- Select an interface --</option>
-        </select>
-        <button onclick="activateMonitorMode()">Activate Monitor Mode</button>
-        <p id="monitorStatus">The {} network interface status: </p>
-         
-        <h1>3. Scan Wi-Fi Networks</h1>
-        <button id="scanButton" onclick="scanWifiNetworks()">Scan Wi-Fi Networks</button>
-        <div id="scanResponse">
-            <div id="loadingIndicator" style="display: none;">
-                <p>⏳ Scanning for Wi-Fi networks...</p>
+        <!-- Step 1: List Adapters -->
+        <div class="wifi-cracker-section" id="section1">
+            <h1><span class="step-indicator">1</span>List Network Adapters</h1>
+            <div class="wifi-controls">
+                <button class="wifi-button" onclick="listAdapters()">List Adapters</button>
             </div>
-            <div id="scanResults" style="display: none;">
-                <h3>Scan Results:</h3>
-                <table id="networksTable" border="1">
-                    <thead>
-                        <tr>
-                            <th>BSSID</th>
-                            <th>Channel</th>
-                            <th>Encryption</th>
-                            <th>ESSID</th>
-                        </tr>
-                    </thead>
-                    <tbody id="networksTableBody">
-                    </tbody>
-                </table>
+            <div id="adapterResponse"></div>
+        </div>
+
+        <!-- Step 2: Activate Monitor Mode -->
+        <div class="wifi-cracker-section" id="section2">
+            <h1><span class="step-indicator">2</span>Activate Monitor Mode</h1>
+            <div class="wifi-controls">
+                <select class="wifi-select" id="interfaceSelect">
+                    <option value="">-- Select an interface --</option>
+                </select>
+                <button class="wifi-button" onclick="activateMonitorMode()">Activate Monitor Mode</button>
+            </div>
+            <div class="wifi-status" id="monitorStatus">Select a network interface to check its status</div>
+        </div>
+
+        <!-- Step 3: Scan Wi-Fi Networks -->
+        <div class="wifi-cracker-section" id="section3">
+            <h1><span class="step-indicator">3</span>Scan Wi-Fi Networks</h1>
+            <div class="wifi-controls">
+                <button class="wifi-button" id="scanButton" onclick="scanWifiNetworks()">Scan Wi-Fi Networks</button>
+            </div>
+            <div id="scanResponse">
+                <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                    Scanning for Wi-Fi networks...
+                </div>
+                <div id="scanResults" style="display: none;">
+                    <h3>Scan Results:</h3>
+                    <table class="wifi-networks-table" id="networksTable">
+                        <thead>
+                            <tr>
+                                <th>BSSID</th>
+                                <th>Channel</th>
+                                <th>Encryption</th>
+                                <th>ESSID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="networksTableBody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <h1>4. Set Channel for Target</h1>
-        <select id="targetSelect">
-            <option value="">-- Select a target --</option>
-        </select>
-        <button onclick="setChannel()">Set Channel</button>
-        <p id="channelStatus"></p>
-
-        <h1>5. Start Capture</h1>
-        <button id="startCaptureButton" onclick="startCapture()">Start Capturing</button>
-        <p id="captureStatus"></p>
-
-        <h1>6. Send Deauth Packets</h1>
-        <label for="packetCount">Number of packets:</label>
-        <input type="number" id="packetCount" value="10" min="1" max="100" style="width: 80px;">
-        <button id="sendDeauthButton" onclick="sendDeauthPackets()">Send Deauth Packets</button>
-        <p id="deauthStatus"></p>
-
-        <h1>7. Stop Capture</h1>
-        <button id="stopCaptureButton" onclick="stopCapture()" disabled>Stop Capturing</button>
-        <p id="stopCaptureStatus"></p>
-
-        <h1>8. Check Handshakes</h1>
-        <p>Check captured packets for WPA handshakes.</p>
-        <button id="checkHandshakeButton" onclick="checkHandshakes()">Check Handshakes</button>
-        <div id="handshakeStatus" style="margin-top: 10px; padding: 10px; background-color: #2a2a2a; border-radius: 4px;"></div>
-    
-        <h1>9. Password Cracking</h1>
-        <p>Select a wordlist and crack the captured handshake.</p>
-        <button id="loadWordlistsButton" onclick="loadWordlists()">Load Available Wordlists</button>
-        <div id="wordlistSection" style="margin-top: 10px; display: none;">
-            <label for="wordlistSelect">Select wordlist:</label>
-            <select id="wordlistSelect">
-                <option value="">-- Select a wordlist --</option>
-            </select>
-            <button id="crackPasswordButton" onclick="crackPassword()" style="margin-left: 10px;">Crack Password</button>
+        <!-- Step 4: Select Target & Set Channel -->
+        <div class="wifi-cracker-section" id="section4">
+            <h1><span class="step-indicator">4</span>Select Target & Set Channel</h1>
+            <div class="wifi-controls">
+                <select class="wifi-select" id="targetSelect">
+                    <option value="">-- Select a target --</option>
+                </select>
+                <button class="wifi-button" onclick="setChannel()">Set Channel</button>
+            </div>
+            <div class="wifi-status" id="channelStatus">Select a target network to set its channel</div>
         </div>
-        <div id="crackStatus" style="margin-top: 10px; padding: 10px; background-color: #2a2a2a; border-radius: 4px; display: none;"></div>
-        <div id="crackResults" style="margin-top: 20px; display: none;">
-            <h4>Cracking Results:</h4>
-            <div id="passwordResult"></div>
+
+        <!-- Step 5: Start Traffic Capture -->
+        <div class="wifi-cracker-section" id="section5">
+            <h1><span class="step-indicator">5</span>Start Traffic Capture</h1>
+            <div class="wifi-controls">
+                <button class="wifi-button success" id="startCaptureButton" onclick="startCapture()">Start Capturing</button>
+            </div>
+            <div class="wifi-status" id="captureStatus">Ready to start capturing traffic</div>
         </div>
-        
+
+        <!-- Step 6: Send Deauth Packets -->
+        <div class="wifi-cracker-section" id="section6">
+            <h1><span class="step-indicator">6</span>Send Deauth Packets</h1>
+            <div class="wifi-controls">
+                <label for="packetCount">Packets:</label>
+                <input type="number" class="wifi-input" id="packetCount" value="10" min="1" max="100">
+                <button class="wifi-button danger" id="sendDeauthButton" onclick="sendDeauthPackets()">Send Deauth Packets</button>
+            </div>
+            <div class="wifi-status" id="deauthStatus">Configure packet count and send deauth packets</div>
+        </div>
+
+        <!-- Step 7: Stop Capture -->
+        <div class="wifi-cracker-section" id="section7">
+            <h1><span class="step-indicator">7</span>Stop Traffic Capture</h1>
+            <div class="wifi-controls">
+                <button class="wifi-button danger" id="stopCaptureButton" onclick="stopCapture()" disabled>Stop Capturing</button>
+            </div>
+            <div class="wifi-status" id="stopCaptureStatus">Capture will be stopped when ready</div>
+        </div>
+
+        <!-- Step 8: Check Handshakes -->
+        <div class="wifi-cracker-section" id="section8">
+            <h1><span class="step-indicator">8</span>Check Handshakes</h1>
+            <p>Analyze captured packets for WPA handshakes.</p>
+            <div class="wifi-controls">
+                <button class="wifi-button" id="checkHandshakeButton" onclick="checkHandshakes()">Check Handshakes</button>
+            </div>
+            <div class="wifi-status" id="handshakeStatus">Click to check for captured handshakes</div>
+        </div>
+
+        <!-- Step 9: Password Cracking -->
+        <div class="wifi-cracker-section" id="section9">
+            <h1><span class="step-indicator">9</span>Password Cracking</h1>
+            <p>Select a wordlist and crack the captured handshake.</p>
+            <div class="wifi-controls">
+                <button class="wifi-button" id="loadWordlistsButton" onclick="loadWordlists()">Load Available Wordlists</button>
+            </div>
+            <div class="wordlist-section" id="wordlistSection" style="display: none;">
+                <label for="wordlistSelect">Select wordlist:</label>
+                <select class="wifi-select" id="wordlistSelect">
+                    <option value="">-- Select a wordlist --</option>
+                </select>
+                <button class="wifi-button success" id="crackPasswordButton" onclick="crackPassword()">Crack Password</button>
+            </div>
+            <div class="wifi-status" id="crackStatus" style="display: none;"></div>
+            <div id="crackResults" style="display: none;">
+                <h4>Cracking Results:</h4>
+                <div id="passwordResult"></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -96,6 +144,28 @@
         let targetBSSID = null;
         let targetESSID = null;
 
+        // 步驟管理函數
+        function markStepCompleted(sectionId) {
+            const section = document.getElementById(sectionId);
+            const indicator = section.querySelector('.step-indicator');
+            section.classList.add('completed');
+            indicator.classList.add('completed');
+        }
+
+        function markStepActive(sectionId) {
+            const section = document.getElementById(sectionId);
+            const indicator = section.querySelector('.step-indicator');
+            section.classList.add('active');
+            indicator.classList.add('active');
+        }
+
+        function clearStepActive(sectionId) {
+            const section = document.getElementById(sectionId);
+            const indicator = section.querySelector('.step-indicator');
+            section.classList.remove('active');
+            indicator.classList.remove('active');
+        }
+
         async function listAdapters() {
             try {
                 const response = await fetch('/WiFi/interface/details');
@@ -105,25 +175,30 @@
                 
                 if (data.success) {
                     responseDiv.innerHTML = `
-                        <h3>Success</h3>
-                        <p>Message: ${data.message}</p>
-                        <h4>Output:</h4>
-                        <pre>${data.output}</pre>
+                        <div class="terminal-output">
+> Success: ${data.message}
+> Network adapters detected: ${data.adapters ? data.adapters.length : 0}
+
+${data.output}
+                        </div>
                     `;
                     
                     // 載入網卡選項
                     loadInterfaceList();
+                    markStepCompleted('section1');
                 } else {
                     responseDiv.innerHTML = `
-                        <h3>Error</h3>
-                        <p>Message: ${data.message}</p>
-                        <pre>${data.output || ''}</pre>
+                        <div class="wifi-status error">
+                            <strong>Error:</strong> ${data.message}
+                            ${data.output ? '<pre>' + data.output + '</pre>' : ''}
+                        </div>
                     `;
                 }
             } catch (error) {
                 document.getElementById('adapterResponse').innerHTML = `
-                    <h3>Network Error</h3>
-                    <p>${error.message}</p>
+                    <div class="wifi-status error">
+                        <strong>Network Error:</strong> ${error.message}
+                    </div>
                 `;
             }
         }
@@ -182,6 +257,7 @@
                 if (data.success) {
                     alert(`Monitor mode activated for ${selectedInterface}`);
                     checkInterfaceStatus(selectedInterface);
+                    markStepCompleted('section2');
                 } else {
                     alert(`Failed to activate monitor mode: ${data.message}`);
                 }
@@ -198,12 +274,16 @@
                 const statusElement = document.getElementById('monitorStatus');
                 
                 if (data.success) {
-                    statusElement.textContent = `The ${interfaceName} network interface status: ${data.status}`;
+                    statusElement.className = 'wifi-status success';
+                    statusElement.textContent = `Interface ${interfaceName}: ${data.status}`;
                 } else {
-                    statusElement.textContent = `The ${interfaceName} network interface status: Error - ${data.message}`;
+                    statusElement.className = 'wifi-status error';
+                    statusElement.textContent = `Interface ${interfaceName}: Error - ${data.message}`;
                 }
             } catch (error) {
-                document.getElementById('monitorStatus').textContent = `The ${interfaceName} network interface status: Error - ${error.message}`;
+                const statusElement = document.getElementById('monitorStatus');
+                statusElement.className = 'wifi-status error';
+                statusElement.textContent = `Interface ${interfaceName}: Error - ${error.message}`;
             }
         }
 
@@ -246,6 +326,7 @@
                 
                 if (data.success && data.ap_list) {
                     displayScanResults(data.ap_list);
+                    markStepCompleted('section3');
                 } else {
                     throw new Error(data.message || 'Failed to scan networks');
                 }
@@ -371,14 +452,20 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    channelStatus.className = 'wifi-status success';
                     channelStatus.textContent = `Channel ${targetChannel} set for ${targetESSID}`;
+                    markStepCompleted('section4');
                 } else {
+                    channelStatus.className = 'wifi-status error';
                     channelStatus.textContent = `Failed to set channel - ${data.message}`;
                 }
             } catch (error) {
+                const channelStatus = document.getElementById('channelStatus');
                 if (error.name === 'AbortError') {
+                    channelStatus.className = 'wifi-status error';
                     channelStatus.textContent = 'Channel setting timed out';
                 } else {
+                    channelStatus.className = 'wifi-status error';
                     channelStatus.textContent = `Error - ${error.message}`;
                 }
             }
@@ -402,6 +489,7 @@
             // 更新按鈕狀態
             startButton.disabled = true;
             startButton.textContent = 'Starting...';
+            captureStatus.className = 'wifi-status info';
             captureStatus.textContent = 'Starting capture...';
 
             try {
@@ -427,19 +515,24 @@
                 
                 if (data.success) {
                     stopButton.disabled = false;
+                    captureStatus.className = 'wifi-status success';
                     captureStatus.textContent = `Capturing traffic for ${targetESSID} on channel ${targetChannel}`;
                     startButton.textContent = 'Capture Started';
+                    markStepCompleted('section5');
                 } else {
                     startButton.disabled = false;
                     startButton.textContent = 'Start Capturing';
+                    captureStatus.className = 'wifi-status error';
                     captureStatus.textContent = `Failed to start capture - ${data.message}`;
                 }
             } catch (error) {
                 startButton.disabled = false;
                 startButton.textContent = 'Start Capturing';
                 if (error.name === 'AbortError') {
+                    captureStatus.className = 'wifi-status error';
                     captureStatus.textContent = 'Capture start timed out';
                 } else {
+                    captureStatus.className = 'wifi-status error';
                     captureStatus.textContent = `Error - ${error.message}`;
                 }
             }
@@ -452,6 +545,7 @@
 
             stopButton.disabled = true;
             stopButton.textContent = 'Stopping...';
+            stopCaptureStatus.className = 'wifi-status info';
             stopCaptureStatus.textContent = 'Stopping capture...';
 
             try {
@@ -471,20 +565,25 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    stopCaptureStatus.className = 'wifi-status success';
                     stopCaptureStatus.textContent = 'Capture stopped successfully';
                     stopButton.textContent = 'Capture Stopped';
                     // 重新啟用 start 按鈕
                     startButton.disabled = false;
                     startButton.textContent = 'Start Capturing';
+                    markStepCompleted('section7');
                 } else {
+                    stopCaptureStatus.className = 'wifi-status error';
                     stopCaptureStatus.textContent = `Failed to stop capture - ${data.message}`;
                     stopButton.disabled = false;
                     stopButton.textContent = 'Stop Capturing';
                 }
             } catch (error) {
                 if (error.name === 'AbortError') {
+                    stopCaptureStatus.className = 'wifi-status error';
                     stopCaptureStatus.textContent = 'Capture stop timed out';
                 } else {
+                    stopCaptureStatus.className = 'wifi-status error';
                     stopCaptureStatus.textContent = `Error - ${error.message}`;
                 }
                 stopButton.disabled = false;
@@ -517,6 +616,7 @@
             // 更新按鈕狀態
             deauthButton.disabled = true;
             deauthButton.textContent = 'Sending...';
+            deauthStatus.className = 'wifi-status info';
             deauthStatus.textContent = `Sending ${packets} deauth packets to ${targetESSID}...`;
 
             try {
@@ -542,14 +642,19 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    deauthStatus.className = 'wifi-status success';
                     deauthStatus.textContent = `Successfully sent ${data.packets_sent} deauth packets to ${targetESSID}`;
+                    markStepCompleted('section6');
                 } else {
+                    deauthStatus.className = 'wifi-status error';
                     deauthStatus.textContent = `Failed to send deauth packets - ${data.message}`;
                 }
             } catch (error) {
                 if (error.name === 'AbortError') {
+                    deauthStatus.className = 'wifi-status error';
                     deauthStatus.textContent = 'Deauth sending timed out';
                 } else {
+                    deauthStatus.className = 'wifi-status error';
                     deauthStatus.textContent = `Error - ${error.message}`;
                 }
             } finally {
@@ -566,6 +671,7 @@
             // 更新按鈕狀態
             checkButton.disabled = true;
             checkButton.textContent = 'Checking...';
+            handshakeStatus.className = 'wifi-status info';
             handshakeStatus.textContent = 'Analyzing capture file for handshakes...';
 
             try {
@@ -588,14 +694,19 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    handshakeStatus.className = 'wifi-status success';
                     handshakeStatus.textContent = data.message;
+                    markStepCompleted('section8');
                 } else {
+                    handshakeStatus.className = 'wifi-status error';
                     handshakeStatus.textContent = `Failed to check handshakes - ${data.message}`;
                 }
             } catch (error) {
                 if (error.name === 'AbortError') {
+                    handshakeStatus.className = 'wifi-status error';
                     handshakeStatus.textContent = 'Handshake checking timed out';
                 } else {
+                    handshakeStatus.className = 'wifi-status error';
                     handshakeStatus.textContent = `Error - ${error.message}`;
                 }
             } finally {
@@ -684,6 +795,7 @@
             // 更新按鈕狀態
             crackButton.disabled = true;
             crackButton.textContent = 'Cracking...';
+            crackStatus.className = 'wifi-status info';
             crackStatus.style.display = 'block';
             crackStatus.textContent = 'Starting password cracking... This may take several minutes.';
             crackResults.style.display = 'none';
@@ -708,20 +820,22 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    crackStatus.className = 'wifi-status success';
                     crackStatus.textContent = data.message;
                     
                     if (data.password_found) {
                         passwordResult.innerHTML = `
-                            <div style="padding: 15px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
+                            <div class="result-box success">
                                 <h5>🎉 Password Found!</h5>
                                 <p><strong>Password:</strong> <code>${data.password_found}</code></p>
                                 <p><strong>Network:</strong> ${targetESSID || 'Target network'}</p>
                                 <p><strong>Wordlist used:</strong> ${data.wordlist_file}</p>
                             </div>
                         `;
+                        markStepCompleted('section9');
                     } else {
                         passwordResult.innerHTML = `
-                            <div style="padding: 15px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
+                            <div class="result-box error">
                                 <h5>❌ Password Not Found</h5>
                                 <p>The password was not found in the selected wordlist.</p>
                                 <p><strong>Wordlist used:</strong> ${data.wordlist_file}</p>
@@ -732,12 +846,15 @@
                     
                     crackResults.style.display = 'block';
                 } else {
+                    crackStatus.className = 'wifi-status error';
                     crackStatus.textContent = `Failed to crack password - ${data.message}`;
                 }
             } catch (error) {
                 if (error.name === 'AbortError') {
+                    crackStatus.className = 'wifi-status error';
                     crackStatus.textContent = 'Password cracking timed out (6 minutes)';
                 } else {
+                    crackStatus.className = 'wifi-status error';
                     crackStatus.textContent = `Error - ${error.message}`;
                 }
             } finally {
