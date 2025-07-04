@@ -400,6 +400,114 @@ async def set_interface_channel(request: ChannelRequest):
             "channel": request.channel
         }
 
+@router.post("/capture/start")
+async def start_capture(request: CaptureRequest, background_tasks: BackgroundTasks):
+    """
+    開始捕獲 Wi-Fi 流量
+    """
+    global capture_active, capture_process
+    
+    if capture_active:
+        return {
+            "success": False,
+            "message": "Capture is already running"
+        }
+    
+    try:
+        # 設定輸出文件名
+        if not request.output_file:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = f"capture_{timestamp}"
+        else:
+            output_file = request.output_file
+            
+        # 確保捕獲目錄存在
+        os.makedirs("data/captures", exist_ok=True)
+        output_path = os.path.join("data/captures", output_file)
+        
+        # 使用 airodump-ng 開始捕獲流量
+        # 指令範例：sudo airodump-ng -c 7 --bssid BO:BE:76:CD:97:24 -w capture wlan1
+        capture_command = [
+            "sudo", "airodump-ng",
+            "-c", str(request.channel),
+            "--bssid", request.bssid,
+            "-w", output_path,
+            request.interface
+        ]
+        
+        # 在背景啟動捕獲進程
+        background_tasks.add_task(run_capture_process, capture_command, output_path)
+        
+        return {
+            "success": True,
+            "message": "Traffic capture started",
+            "capture_file": f"{output_file}.cap",
+            "command": " ".join(capture_command)
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to start capture: {str(e)}"
+        }
+
+@router.post("/capture/stop")
+async def stop_capture():
+    """
+    停止捕獲 Wi-Fi 流量
+    """
+    global capture_active, capture_process
+    
+    try:
+        if not capture_active or not capture_process:
+            return {
+                "success": False,
+                "message": "No capture is currently running"
+            }
+        
+        # 終止捕獲進程
+        capture_process.terminate()
+        
+        # 等待進程結束
+        try:
+            capture_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            capture_process.kill()
+        
+        capture_active = False
+        capture_process = None
+        
+        return {
+            "success": True,
+            "message": "Traffic capture stopped"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to stop capture: {str(e)}"
+        }
+
+# 背景捕獲進程
+async def run_capture_process(command, output_path):
+    global capture_process, capture_active
+    
+    try:
+        capture_active = True
+        capture_process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid
+        )
+        
+        # 等待進程完成或被終止
+        capture_process.wait()
+        
+    except Exception as e:
+        print(f"Capture process error: {e}")
+    finally:
+        capture_active = False
+        capture_process = None
+
 @router.post("/wordlist-generator")
 async def generate_wordlist(request: WordlistRequest):
     try:

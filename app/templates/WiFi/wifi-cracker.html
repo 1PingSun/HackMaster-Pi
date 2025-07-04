@@ -51,6 +51,11 @@
         <button onclick="setChannel()">Set Channel</button>
         <p id="channelStatus">Status: </p>
 
+        <h1>5. Capture the Traffic</h1>
+        <button id="startCaptureButton" onclick="startCapture()">Start Capturing</button>
+        <button id="stopCaptureButton" onclick="stopCapture()" disabled>Stop Capturing</button>
+        <p id="captureStatus">Status: </p>
+
     </div>
 
     <script>
@@ -325,6 +330,87 @@
                 }
             } catch (error) {
                 channelStatus.textContent = `Status: Error - ${error.message}`;
+            }
+        }
+
+        async function startCapture() {
+            if (!selectedInterface) {
+                alert('Please select a network interface first');
+                return;
+            }
+
+            if (!targetBSSID || !targetChannel) {
+                alert('Please select a target and set channel first');
+                return;
+            }
+
+            const startButton = document.getElementById('startCaptureButton');
+            const stopButton = document.getElementById('stopCaptureButton');
+            const captureStatus = document.getElementById('captureStatus');
+
+            // 更新按鈕狀態
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            captureStatus.textContent = 'Status: Starting capture...';
+
+            try {
+                const response = await fetch('/WiFi/capture/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        interface: selectedInterface,
+                        bssid: targetBSSID,
+                        channel: parseInt(targetChannel),
+                        output_file: 'capture'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    captureStatus.textContent = `Status: Capturing traffic for ${targetESSID} on channel ${targetChannel}`;
+                } else {
+                    startButton.disabled = false;
+                    stopButton.disabled = true;
+                    captureStatus.textContent = `Status: Failed to start capture - ${data.message}`;
+                }
+            } catch (error) {
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                captureStatus.textContent = `Status: Error - ${error.message}`;
+            }
+        }
+
+        async function stopCapture() {
+            const startButton = document.getElementById('startCaptureButton');
+            const stopButton = document.getElementById('stopCaptureButton');
+            const captureStatus = document.getElementById('captureStatus');
+
+            captureStatus.textContent = 'Status: Stopping capture...';
+
+            try {
+                const response = await fetch('/WiFi/capture/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    captureStatus.textContent = 'Status: Capture stopped successfully';
+                } else {
+                    captureStatus.textContent = `Status: Failed to stop capture - ${data.message}`;
+                }
+            } catch (error) {
+                captureStatus.textContent = `Status: Error - ${error.message}`;
+            } finally {
+                // 恢復按鈕狀態
+                startButton.disabled = false;
+                stopButton.disabled = true;
             }
         }
     </script>
