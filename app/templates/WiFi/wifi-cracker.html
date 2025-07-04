@@ -196,7 +196,7 @@
             try {
                 // 設定 fetch 超時控制器
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超時
+                const timeoutId = setTimeout(() => controller.abort(), 45000); // 45秒超時，給更多緩衝時間
                 
                 const response = await fetch('/WiFi/ap/scan', {
                     method: 'POST',
@@ -205,7 +205,7 @@
                     },
                     body: JSON.stringify({
                         interface: selectedInterface,
-                        timeout: 15  // 增加掃描時間到15秒
+                        timeout: 12  // 減少到 12 秒，更實際的掃描時間
                     }),
                     signal: controller.signal
                 });
@@ -221,7 +221,7 @@
                 }
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    alert('Network scan timed out (30 seconds). Please try again.');
+                    alert('Network scan timed out (45 seconds). Please try again.');
                 } else {
                     alert(`Network scan failed: ${error.message}`);
                 }

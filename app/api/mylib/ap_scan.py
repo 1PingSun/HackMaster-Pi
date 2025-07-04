@@ -37,16 +37,24 @@ def scan_wifi_networks(interface: str = "wlan0", scan_duration: int = 10) -> Lis
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            preexec_fn=os.setsid
+            stderr=subprocess.PIPE
         )
         
         # 等待掃描完成
         time.sleep(scan_duration)
         
         # 停止掃描
-        os.killpg(os.getpgid(process.pid), 15)
-        process.wait()
+        try:
+            process.terminate()
+            # 給進程足夠的時間來正確關閉和寫入文件
+            process.wait(timeout=10)  # 增加到 10 秒
+        except subprocess.TimeoutExpired:
+            print("進程未在 10 秒內正常終止，強制結束")
+            process.kill()
+            process.wait()
+        
+        # 給文件系統一點時間確保文件完全寫入
+        time.sleep(1)
         
         # 解析結果
         csv_file = temp_file + '-01.csv'
@@ -58,9 +66,16 @@ def scan_wifi_networks(interface: str = "wlan0", scan_duration: int = 10) -> Lis
         # 清理
         if process:
             try:
-                os.killpg(os.getpgid(process.pid), 15)
-            except:
-                pass
+                if process.poll() is None:  # 進程仍在運行
+                    process.terminate()
+                    try:
+                        process.wait(timeout=10)  # 增加到 10 秒
+                    except subprocess.TimeoutExpired:
+                        print("清理時進程未正常終止，強制結束")
+                        process.kill()
+                        process.wait()
+            except Exception as cleanup_error:
+                print(f"清理進程時發生錯誤: {cleanup_error}")
         
         cleanup_files(temp_file)
     
@@ -72,15 +87,26 @@ def parse_csv_output(csv_file: str) -> List[Dict]:
     
     try:
         if not os.path.exists(csv_file):
+            print(f"CSV 文件不存在: {csv_file}")
+            return networks
+        
+        # 檢查文件大小
+        file_size = os.path.getsize(csv_file)
+        print(f"CSV 文件大小: {file_size} bytes")
+        
+        if file_size == 0:
+            print("CSV 文件為空")
             return networks
         
         with open(csv_file, 'r', encoding='utf-8', errors='ignore') as f:
             lines = f.readlines()
         
+        print(f"CSV 文件共有 {len(lines)} 行")
+        
         # 找到 AP 資料區段
         ap_data_started = False
         
-        for line in lines:
+        for line_num, line in enumerate(lines):
             line = line.strip()
             
             # 跳過空行
@@ -89,11 +115,13 @@ def parse_csv_output(csv_file: str) -> List[Dict]:
             
             # 檢查是否為 AP 區段標題
             if 'BSSID' in line and 'ESSID' in line:
+                print(f"找到 AP 資料標題在第 {line_num + 1} 行")
                 ap_data_started = True
                 continue
             
             # 遇到 Station 區段就停止
             if 'Station MAC' in line:
+                print(f"遇到 Station 區段在第 {line_num + 1} 行，停止解析")
                 break
             
             # 解析 AP 資料
@@ -115,9 +143,14 @@ def parse_csv_output(csv_file: str) -> List[Dict]:
                             'ESSID': essid
                         }
                         networks.append(network)
+                        print(f"解析到網路: {bssid} - {essid}")
+        
+        print(f"總共解析到 {len(networks)} 個網路")
     
     except Exception as e:
         print(f"解析 CSV 錯誤: {e}")
+        import traceback
+        traceback.print_exc()
     
     return networks
 
