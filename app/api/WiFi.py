@@ -421,16 +421,29 @@ async def start_capture(request: CaptureRequest, background_tasks: BackgroundTas
         }
     
     try:
-        # 設定輸出文件名
-        if not request.output_file:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_file = f"capture_{timestamp}"
-        else:
-            output_file = request.output_file
+        # 使用固定的輸出文件名
+        output_file = "capture"
             
         # 確保捕獲目錄存在
         os.makedirs("data/captures", exist_ok=True)
         output_path = os.path.join("data/captures", output_file)
+        
+        # 刪除舊的捕獲文件（如果存在）
+        old_files = [
+            f"{output_path}.cap",
+            f"{output_path}-01.cap",
+            f"{output_path}-01.csv",
+            f"{output_path}-01.kismet.csv",
+            f"{output_path}-01.log.csv"
+        ]
+        
+        for old_file in old_files:
+            try:
+                if os.path.exists(old_file):
+                    os.remove(old_file)
+                    print(f"Removed old capture file: {old_file}")
+            except Exception as e:
+                print(f"Failed to remove old file {old_file}: {e}")
         
         # 使用 airodump-ng 開始捕獲流量
         # 指令範例：sudo airodump-ng -c 7 --bssid BO:BE:76:CD:97:24 -w capture wlan1
@@ -448,7 +461,7 @@ async def start_capture(request: CaptureRequest, background_tasks: BackgroundTas
         return {
             "success": True,
             "message": "Traffic capture started",
-            "capture_file": f"{output_file}.cap",
+            "capture_file": "capture.cap",
             "command": " ".join(capture_command)
         }
     except Exception as e:

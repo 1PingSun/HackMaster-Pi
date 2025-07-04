@@ -61,7 +61,10 @@
         <button id="sendDeauthButton" onclick="sendDeauthPackets()">Send Deauth Packets</button>
         <p id="deauthStatus"></p>
 
-        <h1>7. Stop Capture</h1>
+        <h1>7. Check </h1>
+
+
+        <h1>8. Stop Capture</h1>
         <button id="stopCaptureButton" onclick="stopCapture()" disabled>Stop Capturing</button>
         <p id="stopCaptureStatus"></p>
 
@@ -395,8 +398,7 @@
                     body: JSON.stringify({
                         interface: selectedInterface,
                         bssid: targetBSSID,
-                        channel: parseInt(targetChannel),
-                        output_file: 'capture'
+                        channel: parseInt(targetChannel)
                     }),
                     signal: controller.signal
                 });
