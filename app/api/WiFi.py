@@ -821,13 +821,16 @@ async def list_wordlists():
             for file in os.listdir(wordlists_dir):
                 if file.endswith('.txt'):
                     file_path = os.path.join(wordlists_dir, file)
-                    file_stat = os.stat(file_path)
-                    wordlists.append({
-                        "filename": file,
-                        "path": f"wordlists/{file}",
-                        "size": file_stat.st_size,
-                        "category": "custom"
-                    })
+                    if os.path.isfile(file_path):  # 確保是檔案而不是目錄
+                        file_stat = os.stat(file_path)
+                        wordlists.append({
+                            "filename": file,
+                            "path": f"wordlists/{file}",
+                            "size": file_stat.st_size,
+                            "category": "custom",
+                            "modified": datetime.fromtimestamp(file_stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                            "download_link": f"/static/wordlists/{file}"
+                        })
         
         # 檢查 static/wordlists/standard 目錄
         standard_dir = "static/wordlists/standard"
@@ -835,13 +838,16 @@ async def list_wordlists():
             for file in os.listdir(standard_dir):
                 if file.endswith('.txt'):
                     file_path = os.path.join(standard_dir, file)
-                    file_stat = os.stat(file_path)
-                    wordlists.append({
-                        "filename": file,
-                        "path": f"wordlists/standard/{file}",
-                        "size": file_stat.st_size,
-                        "category": "standard"
-                    })
+                    if os.path.isfile(file_path):  # 確保是檔案而不是目錄
+                        file_stat = os.stat(file_path)
+                        wordlists.append({
+                            "filename": file,
+                            "path": f"wordlists/standard/{file}",
+                            "size": file_stat.st_size,
+                            "category": "standard",
+                            "modified": datetime.fromtimestamp(file_stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                            "download_link": f"/static/wordlists/standard/{file}"
+                        })
         
         # 按類別和檔案名稱排序
         wordlists.sort(key=lambda x: (x['category'], x['filename']))
@@ -858,6 +864,50 @@ async def list_wordlists():
             "message": f"Error listing wordlists: {str(e)}",
             "wordlists": [],
             "count": 0
+        }
+
+@router.delete("/wordlists/custom/{filename}")
+async def delete_custom_wordlist(filename: str):
+    """
+    刪除指定的自定義密碼字典檔案
+    """
+    try:
+        # 安全檢查：確保檔案名稱只包含安全字符
+        import re
+        if not re.match(r'^[a-zA-Z0-9_.-]+\.txt$', filename):
+            return {
+                "success": False,
+                "message": "Invalid filename format"
+            }
+        
+        file_path = os.path.join("static/wordlists", filename)
+        
+        # 檢查檔案是否存在
+        if not os.path.exists(file_path):
+            return {
+                "success": False,
+                "message": f"File not found: {filename}"
+            }
+        
+        # 確保不是目錄
+        if not os.path.isfile(file_path):
+            return {
+                "success": False,
+                "message": f"Not a file: {filename}"
+            }
+        
+        # 刪除檔案
+        os.remove(file_path)
+        
+        return {
+            "success": True,
+            "message": f"Successfully deleted {filename}"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error deleting wordlist: {str(e)}"
         }
 
 @router.post("/capture/crack")

@@ -6,6 +6,94 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
     <meta name="theme-color" content="#0f0f17">
+    <style>
+        .wordlist-management {
+            margin-top: 40px;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background-color: #1a1a1a;
+        }
+        
+        .wordlist-management h2 {
+            margin-top: 0;
+            color: #00ffb3;
+        }
+        
+        .wordlists-container {
+            margin-top: 15px;
+        }
+        
+        .wordlists-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .wordlists-table th,
+        .wordlists-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        
+        .wordlists-table th {
+            background-color: #2a2a2a;
+            color: #00ffb3;
+            font-weight: bold;
+        }
+        
+        .wordlists-table tr:hover {
+            background-color: #2a2a2a;
+        }
+        
+        .action-btn {
+            padding: 6px 12px;
+            margin: 0 3px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 12px;
+            display: inline-block;
+        }
+        
+        .download-btn {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .download-btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+        
+        #refreshWordlists {
+            background-color: #28a745;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        #refreshWordlists:hover {
+            background-color: #218838;
+        }
+        
+        #refreshWordlists:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -82,6 +170,14 @@
         
         <div class="status" id="status" style="display: none;">
             Processing request...
+        </div>
+        
+        <div class="wordlist-management">
+            <h2>Generated Wordlists</h2>
+            <button type="button" id="refreshWordlists" onclick="loadCustomWordlists()">Refresh List</button>
+            <div id="wordlistsList" class="wordlists-container">
+                <p>Click "Refresh List" to load your generated wordlists.</p>
+            </div>
         </div>
     </div>
     
@@ -265,6 +361,89 @@
                 statusDiv.textContent = 'Error: ' + error.message;
                 outputDiv.innerHTML += '\n> CONNECTION ERROR: ' + error.message;
             });
+        });
+        
+        // 載入自定義字典檔案列表
+        async function loadCustomWordlists() {
+            const refreshButton = document.getElementById('refreshWordlists');
+            const wordlistsList = document.getElementById('wordlistsList');
+            
+            refreshButton.disabled = true;
+            refreshButton.textContent = 'Loading...';
+            wordlistsList.innerHTML = '<p>Loading wordlists...</p>';
+            
+            try {
+                const response = await fetch('/WiFi/wordlists/list');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // 只顯示自定義字典 (category === 'custom')
+                    const customWordlists = data.wordlists.filter(w => w.category === 'custom');
+                    
+                    if (customWordlists.length === 0) {
+                        wordlistsList.innerHTML = '<p>No custom wordlists found. Generate one above to see it here.</p>';
+                    } else {
+                        let html = '<table class="wordlists-table">';
+                        html += '<thead><tr><th>Filename</th><th>Size</th><th>Modified</th><th>Actions</th></tr></thead>';
+                        html += '<tbody>';
+                        
+                        customWordlists.forEach(wordlist => {
+                            const sizeKB = (wordlist.size / 1024).toFixed(2);
+                            html += `
+                                <tr>
+                                    <td>${wordlist.filename}</td>
+                                    <td>${sizeKB} KB</td>
+                                    <td>${wordlist.modified}</td>
+                                    <td>
+                                        <a href="${wordlist.download_link}" class="action-btn download-btn" download>Download</a>
+                                        <button class="action-btn delete-btn" onclick="deleteWordlist('${wordlist.filename}')">Delete</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        
+                        html += '</tbody></table>';
+                        wordlistsList.innerHTML = html;
+                    }
+                } else {
+                    wordlistsList.innerHTML = `<p>Error loading wordlists: ${data.message}</p>`;
+                }
+            } catch (error) {
+                wordlistsList.innerHTML = `<p>Error loading wordlists: ${error.message}</p>`;
+            } finally {
+                refreshButton.disabled = false;
+                refreshButton.textContent = 'Refresh List';
+            }
+        }
+        
+        // 刪除字典檔案
+        async function deleteWordlist(filename) {
+            if (!confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/WiFi/wordlists/custom/${filename}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`Successfully deleted ${filename}`);
+                    // 重新載入列表
+                    loadCustomWordlists();
+                } else {
+                    alert(`Failed to delete ${filename}: ${data.message}`);
+                }
+            } catch (error) {
+                alert(`Error deleting wordlist: ${error.message}`);
+            }
+        }
+        
+        // 頁面載入時自動載入字典列表
+        window.addEventListener('load', function() {
+            loadCustomWordlists();
         });
     </script>
 </body>
