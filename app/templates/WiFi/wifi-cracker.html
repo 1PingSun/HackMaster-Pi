@@ -70,11 +70,22 @@
         <button id="checkHandshakeButton" onclick="checkHandshakes()">Check Handshakes</button>
         <div id="handshakeStatus" style="margin-top: 10px; padding: 10px; background-color: #2a2a2a; border-radius: 4px;"></div>
     
-        <h1>9. Wi-Fi Cracker</h1>
-        <ol>
-            <li><input type="checkbox">wifi_top2000_passwd.txt</input></li>
-            <li><input type="checkbox">wifi_top2000_passwd.txt</input></li>
-        </ol>
+        <h1>9. Password Cracking</h1>
+        <p>Select a wordlist and crack the captured handshake.</p>
+        <button id="loadWordlistsButton" onclick="loadWordlists()">Load Available Wordlists</button>
+        <div id="wordlistSection" style="margin-top: 10px; display: none;">
+            <label for="wordlistSelect">Select wordlist:</label>
+            <select id="wordlistSelect">
+                <option value="">-- Select a wordlist --</option>
+            </select>
+            <button id="crackPasswordButton" onclick="crackPassword()" style="margin-left: 10px;">Crack Password</button>
+        </div>
+        <div id="crackStatus" style="margin-top: 10px; padding: 10px; background-color: #2a2a2a; border-radius: 4px; display: none;"></div>
+        <div id="crackResults" style="margin-top: 20px; display: none;">
+            <h4>Cracking Results:</h4>
+            <div id="passwordResult"></div>
+        </div>
+        
     </div>
 
     <script>
@@ -591,6 +602,148 @@
                 // 恢復按鈕狀態
                 checkButton.disabled = false;
                 checkButton.textContent = 'Check Handshakes';
+            }
+        }
+
+        async function loadWordlists() {
+            const loadButton = document.getElementById('loadWordlistsButton');
+            const wordlistSection = document.getElementById('wordlistSection');
+            const wordlistSelect = document.getElementById('wordlistSelect');
+
+            // 更新按鈕狀態
+            loadButton.disabled = true;
+            loadButton.textContent = 'Loading...';
+
+            try {
+                const response = await fetch('/WiFi/wordlists/list');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // 清空現有選項
+                    wordlistSelect.innerHTML = '<option value="">-- Select a wordlist --</option>';
+                    
+                    // 按類別分組
+                    const customWordlists = data.wordlists.filter(w => w.category === 'custom');
+                    const standardWordlists = data.wordlists.filter(w => w.category === 'standard');
+                    
+                    // 添加自定義字典
+                    if (customWordlists.length > 0) {
+                        const customGroup = document.createElement('optgroup');
+                        customGroup.label = 'Custom Wordlists';
+                        customWordlists.forEach(wordlist => {
+                            const option = document.createElement('option');
+                            option.value = wordlist.path;
+                            const sizeKB = (wordlist.size / 1024).toFixed(2);
+                            option.textContent = `${wordlist.filename} (${sizeKB} KB)`;
+                            customGroup.appendChild(option);
+                        });
+                        wordlistSelect.appendChild(customGroup);
+                    }
+                    
+                    // 添加標準字典
+                    if (standardWordlists.length > 0) {
+                        const standardGroup = document.createElement('optgroup');
+                        standardGroup.label = 'Standard Wordlists';
+                        standardWordlists.forEach(wordlist => {
+                            const option = document.createElement('option');
+                            option.value = wordlist.path;
+                            const sizeKB = (wordlist.size / 1024).toFixed(2);
+                            option.textContent = `${wordlist.filename} (${sizeKB} KB)`;
+                            standardGroup.appendChild(option);
+                        });
+                        wordlistSelect.appendChild(standardGroup);
+                    }
+                    
+                    wordlistSection.style.display = 'block';
+                    loadButton.textContent = `Found ${data.count} wordlist(s)`;
+                } else {
+                    alert(`Failed to load wordlists: ${data.message}`);
+                    loadButton.textContent = 'Load Available Wordlists';
+                }
+            } catch (error) {
+                alert(`Error loading wordlists: ${error.message}`);
+                loadButton.textContent = 'Load Available Wordlists';
+            } finally {
+                loadButton.disabled = false;
+            }
+        }
+
+        async function crackPassword() {
+            const crackButton = document.getElementById('crackPasswordButton');
+            const wordlistSelect = document.getElementById('wordlistSelect');
+            const crackStatus = document.getElementById('crackStatus');
+            const crackResults = document.getElementById('crackResults');
+            const passwordResult = document.getElementById('passwordResult');
+
+            // 檢查是否選擇了字典
+            if (!wordlistSelect.value) {
+                alert('Please select a wordlist first');
+                return;
+            }
+
+            // 更新按鈕狀態
+            crackButton.disabled = true;
+            crackButton.textContent = 'Cracking...';
+            crackStatus.style.display = 'block';
+            crackStatus.textContent = 'Starting password cracking... This may take several minutes.';
+            crackResults.style.display = 'none';
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 360000); // 6分鐘超時
+                
+                const response = await fetch('/WiFi/capture/crack', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        wordlist_file: wordlistSelect.value
+                    }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    crackStatus.textContent = data.message;
+                    
+                    if (data.password_found) {
+                        passwordResult.innerHTML = `
+                            <div style="padding: 15px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
+                                <h5>🎉 Password Found!</h5>
+                                <p><strong>Password:</strong> <code>${data.password_found}</code></p>
+                                <p><strong>Network:</strong> ${targetESSID || 'Target network'}</p>
+                                <p><strong>Wordlist used:</strong> ${data.wordlist_file}</p>
+                            </div>
+                        `;
+                    } else {
+                        passwordResult.innerHTML = `
+                            <div style="padding: 15px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
+                                <h5>❌ Password Not Found</h5>
+                                <p>The password was not found in the selected wordlist.</p>
+                                <p><strong>Wordlist used:</strong> ${data.wordlist_file}</p>
+                                <p>Try using a different or larger wordlist.</p>
+                            </div>
+                        `;
+                    }
+                    
+                    crackResults.style.display = 'block';
+                } else {
+                    crackStatus.textContent = `Failed to crack password - ${data.message}`;
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    crackStatus.textContent = 'Password cracking timed out (6 minutes)';
+                } else {
+                    crackStatus.textContent = `Error - ${error.message}`;
+                }
+            } finally {
+                // 恢復按鈕狀態
+                crackButton.disabled = false;
+                crackButton.textContent = 'Crack Password';
             }
         }
     </script>

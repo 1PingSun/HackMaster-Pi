@@ -108,6 +108,11 @@ class ChannelRequest(BaseModel):
 class HandshakeCheckRequest(BaseModel):
     capture_file: Optional[str] = "deauth_handshake-01.cap"  # airodump-ng 會自動加上 -01
 
+# 定義密碼破解請求模型
+class CrackPasswordRequest(BaseModel):
+    capture_file: Optional[str] = "deauth_handshake-01.cap"
+    wordlist_file: str
+
 @router.get("/ap-emulator", response_class=HTMLResponse)
 def read_ap_emulator(request: Request):
     return templates.TemplateResponse(
@@ -801,3 +806,148 @@ async def generate_wordlist(request: WordlistRequest):
             "success": False,
             "error": str(e)
         })
+
+@router.get("/wordlists/list")
+async def list_wordlists():
+    """
+    列出可用的密碼字典檔案
+    """
+    try:
+        wordlists = []
+        
+        # 檢查 static/wordlists 目錄
+        wordlists_dir = "static/wordlists"
+        if os.path.exists(wordlists_dir):
+            for file in os.listdir(wordlists_dir):
+                if file.endswith('.txt'):
+                    file_path = os.path.join(wordlists_dir, file)
+                    file_stat = os.stat(file_path)
+                    wordlists.append({
+                        "filename": file,
+                        "path": f"wordlists/{file}",
+                        "size": file_stat.st_size,
+                        "category": "custom"
+                    })
+        
+        # 檢查 static/wordlists/standard 目錄
+        standard_dir = "static/wordlists/standard"
+        if os.path.exists(standard_dir):
+            for file in os.listdir(standard_dir):
+                if file.endswith('.txt'):
+                    file_path = os.path.join(standard_dir, file)
+                    file_stat = os.stat(file_path)
+                    wordlists.append({
+                        "filename": file,
+                        "path": f"wordlists/standard/{file}",
+                        "size": file_stat.st_size,
+                        "category": "standard"
+                    })
+        
+        # 按類別和檔案名稱排序
+        wordlists.sort(key=lambda x: (x['category'], x['filename']))
+        
+        return {
+            "success": True,
+            "wordlists": wordlists,
+            "count": len(wordlists)
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error listing wordlists: {str(e)}",
+            "wordlists": [],
+            "count": 0
+        }
+
+@router.post("/capture/crack")
+async def crack_password(request: CrackPasswordRequest):
+    """
+    使用指定的字典檔案進行密碼破解
+    """
+    try:
+        # 構建 capture 文件的完整路徑
+        capture_path = os.path.join("data/captures", request.capture_file)
+        
+        # 檢查 capture 文件是否存在
+        if not os.path.exists(capture_path):
+            # 嘗試尋找最新的 capture 檔案
+            import glob
+            capture_dir = "data/captures"
+            if os.path.exists(capture_dir):
+                capture_files = glob.glob(os.path.join(capture_dir, "deauth_handshake*.cap"))
+                if capture_files:
+                    capture_path = max(capture_files, key=os.path.getmtime)
+                    request.capture_file = os.path.basename(capture_path)
+                else:
+                    return {
+                        "success": False,
+                        "message": f"No capture files found in {capture_dir}"
+                    }
+            else:
+                return {
+                    "success": False,
+                    "message": f"Capture directory not found: {capture_dir}"
+                }
+        
+        # 構建 wordlist 文件的完整路徑
+        wordlist_path = os.path.join("static", request.wordlist_file)
+        
+        # 檢查 wordlist 文件是否存在
+        if not os.path.exists(wordlist_path):
+            return {
+                "success": False,
+                "message": f"Wordlist file not found: {request.wordlist_file}"
+            }
+        
+        # 構建 aircrack-ng 破解指令
+        # sudo aircrack-ng capture-01.cap -w wordlist.txt
+        crack_command = [
+            "sudo", "aircrack-ng",
+            capture_path,
+            "-w", wordlist_path
+        ]
+        
+        # 執行指令 (這可能需要很長時間)
+        result = subprocess.run(
+            crack_command,
+            capture_output=True, 
+            text=True, 
+            timeout=300  # 5分鐘超時
+        )
+        
+        # 解析輸出尋找密碼
+        password_found = None
+        if "KEY FOUND!" in result.stdout:
+            # 從輸出中提取密碼
+            lines = result.stdout.split('\n')
+            for line in lines:
+                if "KEY FOUND!" in line:
+                    # 範例: "KEY FOUND! [ password123 ]"
+                    import re
+                    password_match = re.search(r'KEY FOUND!\s*\[\s*(.+?)\s*\]', line)
+                    if password_match:
+                        password_found = password_match.group(1)
+                    break
+        
+        return {
+            "success": True,
+            "message": "Password cracking completed",
+            "capture_file": request.capture_file,
+            "wordlist_file": request.wordlist_file,
+            "password_found": password_found,
+            "command": " ".join(crack_command),
+            "raw_output": result.stdout,
+            "return_code": result.returncode
+        }
+            
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "message": "Password cracking timed out (5 minutes). The wordlist might be too large or the password is not in the list."
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error during password cracking: {str(e)}"
+        }
