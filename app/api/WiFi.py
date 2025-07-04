@@ -106,7 +106,7 @@ class ChannelRequest(BaseModel):
 
 # 定義檢查握手包請求模型
 class HandshakeCheckRequest(BaseModel):
-    capture_file: Optional[str] = "capture-01.cap"  # airodump-ng 會自動加上 -01
+    capture_file: Optional[str] = "deauth_handshake-01.cap"  # airodump-ng 會自動加上 -01
 
 @router.get("/ap-emulator", response_class=HTMLResponse)
 def read_ap_emulator(request: Request):
@@ -426,7 +426,7 @@ async def start_capture(request: CaptureRequest, background_tasks: BackgroundTas
     
     try:
         # 使用固定的輸出文件名
-        output_file = "capture"
+        output_file = "deauth_handshake"
             
         # 確保捕獲目錄存在
         os.makedirs("data/captures", exist_ok=True)
@@ -466,7 +466,7 @@ async def start_capture(request: CaptureRequest, background_tasks: BackgroundTas
         return {
             "success": True,
             "message": "Traffic capture started",
-            "capture_file": "capture-01.cap",  # airodump-ng 會自動產生 -01 後綴
+            "capture_file": "deauth_handshake-01.cap",  # airodump-ng 會自動產生 -01 後綴
             "command": " ".join(capture_command)
         }
     except Exception as e:
@@ -547,7 +547,7 @@ async def check_handshake(request: HandshakeCheckRequest):
             import glob
             capture_dir = "data/captures"
             if os.path.exists(capture_dir):
-                capture_files = glob.glob(os.path.join(capture_dir, "capture*.cap"))
+                capture_files = glob.glob(os.path.join(capture_dir, "deauth_handshake*.cap"))
                 if capture_files:
                     # 按修改時間排序，取最新的
                     capture_path = max(capture_files, key=os.path.getmtime)
@@ -555,7 +555,7 @@ async def check_handshake(request: HandshakeCheckRequest):
                 else:
                     return {
                         "success": False,
-                        "message": f"No capture files found in {capture_dir}",
+                        "message": f"No deauth_handshake files found in {capture_dir}",
                         "handshakes": 0,
                         "networks": []
                     }
@@ -801,48 +801,3 @@ async def generate_wordlist(request: WordlistRequest):
             "success": False,
             "error": str(e)
         })
-
-@router.get("/capture/list")
-async def list_capture_files():
-    """
-    列出可用的捕獲檔案
-    """
-    try:
-        capture_dir = "data/captures"
-        
-        if not os.path.exists(capture_dir):
-            return {
-                "success": True,
-                "message": "No capture directory found",
-                "files": []
-            }
-        
-        import glob
-        capture_files = glob.glob(os.path.join(capture_dir, "capture*.cap"))
-        
-        files_info = []
-        for file_path in capture_files:
-            file_stat = os.stat(file_path)
-            files_info.append({
-                "filename": os.path.basename(file_path),
-                "size": file_stat.st_size,
-                "modified": file_stat.st_mtime,
-                "path": file_path
-            })
-        
-        # 按修改時間排序（最新的在前）
-        files_info.sort(key=lambda x: x['modified'], reverse=True)
-        
-        return {
-            "success": True,
-            "message": f"Found {len(files_info)} capture file(s)",
-            "files": files_info,
-            "capture_dir": capture_dir
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error listing capture files: {str(e)}",
-            "files": []
-        }
