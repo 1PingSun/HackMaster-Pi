@@ -49,12 +49,15 @@
             <option value="">-- Select a target --</option>
         </select>
         <button onclick="setChannel()">Set Channel</button>
-        <p id="channelStatus">Status: </p>
+        <p id="channelStatus"></p>
 
-        <h1>5. Capture the Traffic</h1>
+        <h1>5. Start Capture</h1>
         <button id="startCaptureButton" onclick="startCapture()">Start Capturing</button>
+        <p id="captureStatus"></p>
+
+        <h1>6. Stop Capture</h1>
         <button id="stopCaptureButton" onclick="stopCapture()" disabled>Stop Capturing</button>
-        <p id="captureStatus">Status: </p>
+        <p id="stopCaptureStatus"></p>
 
     </div>
 
@@ -318,7 +321,7 @@
             targetESSID = selectedTarget.ESSID || '<hidden>';
 
             const channelStatus = document.getElementById('channelStatus');
-            channelStatus.textContent = 'Status: Setting channel...';
+            channelStatus.textContent = 'Setting channel...';
 
             try {
                 const controller = new AbortController();
@@ -341,15 +344,15 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    channelStatus.textContent = `Status: Channel ${targetChannel} set for ${targetESSID}`;
+                    channelStatus.textContent = `Channel ${targetChannel} set for ${targetESSID}`;
                 } else {
-                    channelStatus.textContent = `Status: Failed to set channel - ${data.message}`;
+                    channelStatus.textContent = `Failed to set channel - ${data.message}`;
                 }
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    channelStatus.textContent = 'Status: Channel setting timed out';
+                    channelStatus.textContent = 'Channel setting timed out';
                 } else {
-                    channelStatus.textContent = `Status: Error - ${error.message}`;
+                    channelStatus.textContent = `Error - ${error.message}`;
                 }
             }
         }
@@ -371,8 +374,8 @@
 
             // 更新按鈕狀態
             startButton.disabled = true;
-            stopButton.disabled = false;
-            captureStatus.textContent = 'Status: Starting capture...';
+            startButton.textContent = 'Starting...';
+            captureStatus.textContent = 'Starting capture...';
 
             try {
                 const controller = new AbortController();
@@ -397,19 +400,21 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    captureStatus.textContent = `Status: Capturing traffic for ${targetESSID} on channel ${targetChannel}`;
+                    stopButton.disabled = false;
+                    captureStatus.textContent = `Capturing traffic for ${targetESSID} on channel ${targetChannel}`;
+                    startButton.textContent = 'Capture Started';
                 } else {
                     startButton.disabled = false;
-                    stopButton.disabled = true;
-                    captureStatus.textContent = `Status: Failed to start capture - ${data.message}`;
+                    startButton.textContent = 'Start Capturing';
+                    captureStatus.textContent = `Failed to start capture - ${data.message}`;
                 }
             } catch (error) {
                 startButton.disabled = false;
-                stopButton.disabled = true;
+                startButton.textContent = 'Start Capturing';
                 if (error.name === 'AbortError') {
-                    captureStatus.textContent = 'Status: Capture start timed out';
+                    captureStatus.textContent = 'Capture start timed out';
                 } else {
-                    captureStatus.textContent = `Status: Error - ${error.message}`;
+                    captureStatus.textContent = `Error - ${error.message}`;
                 }
             }
         }
@@ -417,9 +422,11 @@
         async function stopCapture() {
             const startButton = document.getElementById('startCaptureButton');
             const stopButton = document.getElementById('stopCaptureButton');
-            const captureStatus = document.getElementById('captureStatus');
+            const stopCaptureStatus = document.getElementById('stopCaptureStatus');
 
-            captureStatus.textContent = 'Status: Stopping capture...';
+            stopButton.disabled = true;
+            stopButton.textContent = 'Stopping...';
+            stopCaptureStatus.textContent = 'Stopping capture...';
 
             try {
                 const controller = new AbortController();
@@ -438,20 +445,24 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    captureStatus.textContent = 'Status: Capture stopped successfully';
+                    stopCaptureStatus.textContent = 'Capture stopped successfully';
+                    stopButton.textContent = 'Capture Stopped';
+                    // 重新啟用 start 按鈕
+                    startButton.disabled = false;
+                    startButton.textContent = 'Start Capturing';
                 } else {
-                    captureStatus.textContent = `Status: Failed to stop capture - ${data.message}`;
+                    stopCaptureStatus.textContent = `Failed to stop capture - ${data.message}`;
+                    stopButton.disabled = false;
+                    stopButton.textContent = 'Stop Capturing';
                 }
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    captureStatus.textContent = 'Status: Capture stop timed out';
+                    stopCaptureStatus.textContent = 'Capture stop timed out';
                 } else {
-                    captureStatus.textContent = `Status: Error - ${error.message}`;
+                    stopCaptureStatus.textContent = `Error - ${error.message}`;
                 }
-            } finally {
-                // 恢復按鈕狀態
-                startButton.disabled = false;
-                stopButton.disabled = true;
+                stopButton.disabled = false;
+                stopButton.textContent = 'Stop Capturing';
             }
         }
     </script>
