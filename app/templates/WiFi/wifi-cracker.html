@@ -16,7 +16,7 @@
 
         <!-- Step 1: List Adapters -->
         <div class="wifi-cracker-section" id="section1">
-            <h1><span class="step-indicator">1</span>List Network Adapters</h1>
+            <h1>1. List Network Adapters</h1>
             <div class="wifi-controls">
                 <button class="wifi-button" onclick="listAdapters()">List Adapters</button>
             </div>
@@ -25,7 +25,7 @@
 
         <!-- Step 2: Activate Monitor Mode -->
         <div class="wifi-cracker-section" id="section2">
-            <h1><span class="step-indicator">2</span>Activate Monitor Mode</h1>
+            <h1>2. Activate Monitor Mode</h1>
             <div class="wifi-controls">
                 <select class="wifi-select" id="interfaceSelect">
                     <option value="">-- Select an interface --</option>
@@ -37,7 +37,7 @@
 
         <!-- Step 3: Scan Wi-Fi Networks -->
         <div class="wifi-cracker-section" id="section3">
-            <h1><span class="step-indicator">3</span>Scan Wi-Fi Networks</h1>
+            <h1>3. Scan Wi-Fi Networks</h1>
             <div class="wifi-controls">
                 <button class="wifi-button" id="scanButton" onclick="scanWifiNetworks()">Scan Wi-Fi Networks</button>
             </div>
@@ -68,7 +68,7 @@
 
         <!-- Step 4: Select Target & Set Channel -->
         <div class="wifi-cracker-section" id="section4">
-            <h1><span class="step-indicator">4</span>Select Target & Set Channel</h1>
+            <h1>4. Select Target & Set Channel</h1>
             <div class="wifi-controls">
                 <select class="wifi-select" id="targetSelect">
                     <option value="">-- Select a target --</option>
@@ -80,7 +80,7 @@
 
         <!-- Step 5: Start Traffic Capture -->
         <div class="wifi-cracker-section" id="section5">
-            <h1><span class="step-indicator">5</span>Start Traffic Capture</h1>
+            <h1>5. Start Traffic Capture</h1>
             <div class="wifi-controls">
                 <button class="wifi-button success" id="startCaptureButton" onclick="startCapture()">Start Capturing</button>
             </div>
@@ -89,7 +89,7 @@
 
         <!-- Step 6: Send Deauth Packets -->
         <div class="wifi-cracker-section" id="section6">
-            <h1><span class="step-indicator">6</span>Send Deauth Packets</h1>
+            <h1>6. Send Deauth Packets</h1>
             <div class="wifi-controls">
                 <label for="packetCount">Packets:</label>
                 <input type="number" class="wifi-input" id="packetCount" value="10" min="1" max="100">
@@ -100,7 +100,7 @@
 
         <!-- Step 7: Stop Capture -->
         <div class="wifi-cracker-section" id="section7">
-            <h1><span class="step-indicator">7</span>Stop Traffic Capture</h1>
+            <h1>7. Stop Traffic Capture</h1>
             <div class="wifi-controls">
                 <button class="wifi-button danger" id="stopCaptureButton" onclick="stopCapture()" disabled>Stop Capturing</button>
             </div>
@@ -109,7 +109,7 @@
 
         <!-- Step 8: Check Handshakes -->
         <div class="wifi-cracker-section" id="section8">
-            <h1><span class="step-indicator">8</span>Check Handshakes</h1>
+            <h1>8. Check Handshakes</h1>
             <p>Analyze captured packets for WPA handshakes.</p>
             <div class="wifi-controls">
                 <button class="wifi-button" id="checkHandshakeButton" onclick="checkHandshakes()">Check Handshakes</button>
@@ -119,7 +119,7 @@
 
         <!-- Step 9: Password Cracking -->
         <div class="wifi-cracker-section" id="section9">
-            <h1><span class="step-indicator">9</span>Password Cracking</h1>
+            <h1>9. Password Cracking</h1>
             <p>Select a wordlist and crack the captured handshake.</p>
             <div class="wifi-controls">
                 <button class="wifi-button" id="loadWordlistsButton" onclick="loadWordlists()">Load Available Wordlists</button>
@@ -150,23 +150,23 @@
         // 步驟管理函數
         function markStepCompleted(sectionId) {
             const section = document.getElementById(sectionId);
-            const indicator = section.querySelector('.step-indicator');
+            const title = section.querySelector('h1');
             section.classList.add('completed');
-            indicator.classList.add('completed');
+            title.classList.add('completed');
         }
 
         function markStepActive(sectionId) {
             const section = document.getElementById(sectionId);
-            const indicator = section.querySelector('.step-indicator');
+            const title = section.querySelector('h1');
             section.classList.add('active');
-            indicator.classList.add('active');
+            title.classList.add('active');
         }
 
         function clearStepActive(sectionId) {
             const section = document.getElementById(sectionId);
-            const indicator = section.querySelector('.step-indicator');
+            const title = section.querySelector('h1');
             section.classList.remove('active');
-            indicator.classList.remove('active');
+            title.classList.remove('active');
         }
 
         async function listAdapters() {
