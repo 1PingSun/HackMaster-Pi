@@ -196,7 +196,7 @@
             try {
                 // 設定 fetch 超時控制器
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000); // 30秒超時
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超時
                 
                 const response = await fetch('/WiFi/ap/scan', {
                     method: 'POST',
@@ -205,7 +205,7 @@
                     },
                     body: JSON.stringify({
                         interface: selectedInterface,
-                        timeout: 5  // 增加掃描時間到15秒
+                        timeout: 15  // 增加掃描時間到15秒
                     }),
                     signal: controller.signal
                 });
