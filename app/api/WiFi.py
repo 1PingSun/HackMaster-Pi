@@ -104,6 +104,10 @@ class ChannelRequest(BaseModel):
     interface: str
     channel: str
 
+# 定義檢查握手包請求模型
+class HandshakeCheckRequest(BaseModel):
+    capture_file: Optional[str] = "capture-01.cap"  # 預設使用固定檔名
+
 @router.get("/ap-emulator", response_class=HTMLResponse)
 def read_ap_emulator(request: Request):
     return templates.TemplateResponse(
@@ -526,6 +530,146 @@ async def send_deauth(request: DeauthRequest):
             "message": f"Error sending deauth packets: {str(e)}",
             "packets_sent": 0
         }
+
+
+@router.post("/handshake/check")
+async def check_handshake(request: HandshakeCheckRequest):
+    """
+    檢查捕獲文件中的握手包數量
+    """
+    try:
+        # 構建 capture 文件的完整路徑
+        capture_path = os.path.join("data/captures", request.capture_file)
+        
+        # 檢查文件是否存在
+        if not os.path.exists(capture_path):
+            return {
+                "success": False,
+                "message": f"Capture file not found: {request.capture_file}",
+                "handshakes": 0,
+                "networks": []
+            }
+        
+        # 構建 aircrack-ng 指令來檢查握手包
+        # sudo aircrack-ng capture-01.cap
+        aircrack_command = [
+            "sudo", "aircrack-ng",
+            capture_path
+        ]
+        
+        # 執行指令
+        result = subprocess.run(
+            aircrack_command,
+            capture_output=True, 
+            text=True, 
+            timeout=30  # 30秒超時
+        )
+        
+        # 解析 aircrack-ng 的輸出
+        networks = parse_aircrack_output(result.stdout)
+        
+        # 計算總握手包數量
+        total_handshakes = sum(network.get('handshakes', 0) for network in networks)
+        
+        return {
+            "success": True,
+            "message": f"Found {total_handshakes} handshake(s) in {len(networks)} network(s)",
+            "capture_file": request.capture_file,
+            "total_handshakes": total_handshakes,
+            "total_networks": len(networks),
+            "networks": networks,
+            "command": " ".join(aircrack_command),
+            "raw_output": result.stdout
+        }
+            
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "message": "Aircrack-ng command timed out (30 seconds)",
+            "handshakes": 0,
+            "networks": []
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error checking handshakes: {str(e)}",
+            "handshakes": 0,
+            "networks": []
+        }
+
+
+def parse_aircrack_output(output: str) -> List[Dict]:
+    """
+    解析 aircrack-ng 的輸出來提取網路資訊和握手包數量
+    """
+    networks = []
+    
+    try:
+        lines = output.split('\n')
+        in_network_list = False
+        
+        for line in lines:
+            line = line.strip()
+            
+            # 找到網路列表的開始
+            if "#  BSSID" in line and "ESSID" in line and "Encryption" in line:
+                in_network_list = True
+                continue
+            
+            # 如果遇到空行或其他內容，停止解析網路列表
+            if in_network_list and not line:
+                break
+                
+            # 解析網路資訊
+            if in_network_list and line and line[0].isdigit():
+                # 範例行: "   1  B0:BE:76:CD:97:24  victim                    WPA (0 handshake)"
+                parts = line.split()
+                if len(parts) >= 4:
+                    try:
+                        network_num = parts[0]
+                        bssid = parts[1]
+                        
+                        # ESSID 可能包含空格，需要特殊處理
+                        # 找到 WPA/WEP 等加密類型的位置
+                        encryption_start = -1
+                        for i, part in enumerate(parts[2:], 2):
+                            if any(enc in part.upper() for enc in ['WPA', 'WEP', 'OPN']):
+                                encryption_start = i
+                                break
+                        
+                        if encryption_start > 2:
+                            essid = ' '.join(parts[2:encryption_start])
+                            encryption_info = ' '.join(parts[encryption_start:])
+                        else:
+                            essid = parts[2] if len(parts) > 2 else "Unknown"
+                            encryption_info = ' '.join(parts[3:]) if len(parts) > 3 else "Unknown"
+                        
+                        # 提取握手包數量
+                        handshakes = 0
+                        if "handshake" in encryption_info.lower():
+                            # 尋找數字
+                            import re
+                            handshake_match = re.search(r'\((\d+) handshake', encryption_info)
+                            if handshake_match:
+                                handshakes = int(handshake_match.group(1))
+                        
+                        network = {
+                            "number": int(network_num),
+                            "bssid": bssid,
+                            "essid": essid,
+                            "encryption": encryption_info,
+                            "handshakes": handshakes
+                        }
+                        networks.append(network)
+                        
+                    except (ValueError, IndexError) as e:
+                        print(f"Error parsing network line '{line}': {e}")
+                        continue
+    
+    except Exception as e:
+        print(f"Error parsing aircrack output: {e}")
+    
+    return networks
 
 
 @router.post("/capture/stop")
