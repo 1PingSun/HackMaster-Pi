@@ -10,14 +10,26 @@
 
 HackMaster Pi is an open-source IoT security testing tool based on the Raspberry Pi Zero 2 W, designed for IoT security learning. With its cost-effective features, it combines Bluetooth, Wi-Fi, infrared, RFID, and USB functionalities, allowing users to learn about IoT device attack and defense knowledge on a budget.
 
-<div style="display: flex; width: 100vw;">
-  <img style="aspect-ratio: 1/1;" src="assets/hackmaster-pi/HackMaster-Pi.jpg">
-  <img style="aspect-ratio: 1/1;" src="assets/webUI/image.png">
-</div>
+HackMaster Pi              |  WebUI
+:-------------------------:|:-------------------------:
+![](assets/hackmaster-pi/HackMaster-Pi.jpg) | ![](assets/webUI/image.png)
 
 If you have any suggestions for improvements or find any bugs, feel free to fork the repository and submit a pull request. We appreciate your contributions!
 
 If you find this project useful, please give it a star on GitHub. Your support is greatly appreciated!
+
+## Features
+
+- [x] Beacon Emulator
+- [x] AirPods Emulator
+- [x] Wi-Fi Password Cracker
+- [x] Password Wordlist Generator
+- [ ] AP Emulator
+- [ ] Wi-Fi AP Rickroll
+- [ ] IR Function
+- [ ] RFID Function
+
+Learn more: [https://github.com/users/1PingSun/projects/1](https://github.com/users/1PingSun/projects/1)
 
 ## Installation and Usage
 
