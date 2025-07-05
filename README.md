@@ -1,14 +1,19 @@
 [![License MIT](https://img.shields.io/badge/LICENSE-MIT-green)](https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/refs/heads/main/LICENSE)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="icon/Wide/PNG-Dark.png" />
-  <source media="(prefers-color-scheme: light)" srcset="icon/Wide/PNG-Light.png" />
-  <img alt="Logo" src="icon/Wide/PNG-Light.png" />
+  <source media="(prefers-color-scheme: dark)" srcset="assets/icon/Wide/PNG-Dark.png" />
+  <source media="(prefers-color-scheme: light)" srcset="assets/icon/Wide/PNG-Light.png" />
+  <img alt="Logo" src="assets/icon/Wide/PNG-Light.png" />
 </picture>
 
-
+---
 
 HackMaster Pi is an open-source IoT security testing tool based on the Raspberry Pi Zero 2 W, designed for IoT security learning. With its cost-effective features, it combines Bluetooth, Wi-Fi, infrared, RFID, and USB functionalities, allowing users to learn about IoT device attack and defense knowledge on a budget.
+
+<div style="display: flex; width: 100vw;">
+  <img style="aspect-ratio: 1/1;" src="assets/hackmaster-pi/HackMaster-Pi.jpg">
+  <img style="aspect-ratio: 1/1;" src="assets/webUI/image.png">
+</div>
 
 If you have any suggestions for improvements or find any bugs, feel free to fork the repository and submit a pull request. We appreciate your contributions!
 
