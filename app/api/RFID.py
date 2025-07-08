@@ -11,6 +11,7 @@ import json
 import asyncio
 from datetime import datetime
 import random
+import binascii
 
 router = APIRouter(
     prefix="/RFID",
@@ -50,6 +51,13 @@ def identify_rfid(request: Request):
         {"request": request, "message": "Identify RFID Card"}
     )
 
+@router.get("/write-uid", response_class=HTMLResponse)
+def write_uid(request: Request):
+    return templates.TemplateResponse(
+        "RFID/write_uid.html",
+        {"request": request, "message": "Write UID to HF RFID CUID Card"}
+    )
+
 @router.post("/setup-pn532")
 async def setup_pn532(request: Request):
     try:
@@ -68,10 +76,26 @@ async def identify_rfid_post(request: Request):
         return JSONResponse(content=found)
     except Exception as e:
         return JSONResponse(content={"success": False, "error": str(e)})
+    
+@router.post("/write-uid")
+async def write_uid_post(request: Request, write_request: WriteCardRequest):
+    try:
+        new_uid_hex = write_request.card_data.get("uid")
+        if not new_uid_hex:
+            return JSONResponse(content={"success": False, "error": "UID is required"})
+        
+        if len(new_uid_hex) != 8:
+            print("❌ UID UID must be 8 hexadecimal characters")
+            return JSONResponse(content={"success": False, "error": "UID must be 8 hexadecimal characters"})
+        
+        try:
+            binascii.unhexlify(new_uid_hex)
+        except:
+            print("❌ UID contains invalid characters")
+            return JSONResponse(content={"success": False, "error": "UID contains invalid characters"})
+        
+        result = RFIDlib.write_uid(new_uid_hex)
+        return JSONResponse(content=result)
 
-@router.get("/rfid-writer", response_class=HTMLResponse)
-def read_rfid_writer(request: Request):
-    return templates.TemplateResponse(
-        "RFID/rfid-writer.html",
-        {"request": request, "message": "RFID Writer"}
-    )
+    except Exception as e:
+        return JSONResponse(content={"success": False, "error": str(e)})

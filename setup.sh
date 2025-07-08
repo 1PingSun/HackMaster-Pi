@@ -22,7 +22,7 @@ sudo ./setup_hackmasterpi.sh
 # sudo apt install -y i2c-tools
 sudo apt install -y libnfc-dev libnfc-bin libnfc-examples
 # sudo apt install -y python3-pip python3-dev
-sudo pip3 install --break-system-packages pn532pi
+sudo pip3 install --break-system-packages pn532pi binascii
 
 sudo mkdir -p /etc/nfc
 

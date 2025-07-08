@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <title>Write UID to HF RFID CUID Card - HackMaster Pi</title>
+    <meta name="theme-color" content="#0f0f17">
+</head>
+<body>
+    <h1>Write UID to HF RFID CUID Card</h1>
+    
+    <h2>1. Setup PN532</h2>
+    <button id="setup-btn">Setup</button>
+    <div id="setup-status"></div>
+
+    <h2>2. Place your HF RFID card on the reader to identify it.</h2>
+
+    <h2>3. Write New UID</h2>
+    <div>
+        <label for="new-uid">New UID (8 hex characters):</label>
+        <input type="text" id="new-uid" placeholder="Enter new UID in hex format (e.g., 1a3b5c7d)" maxlength="8" />
+        <button id="write-btn" disabled>Write UID</button>
+    </div>
+    <div id="write-status"></div>
+    
+    <div id="write-result" style="display: none;">
+        <h3>Write Result</h3>
+        <p id="write-result-message"></p>
+    </div>
+
+    <script>
+        const setupBtn = document.getElementById('setup-btn');
+        const writeBtn = document.getElementById('write-btn');
+        const newUidInput = document.getElementById('new-uid');
+        
+        const setupStatus = document.getElementById('setup-status');
+        const writeStatus = document.getElementById('write-status');
+        
+        const writeResult = document.getElementById('write-result');
+        const writeResultMessage = document.getElementById('write-result-message');
+
+        let isSetup = false;
+
+        // Setup PN532
+        setupBtn.addEventListener('click', async () => {
+            setupBtn.disabled = true;
+            setupStatus.innerHTML = '<p>Setting up PN532...</p>';
+            
+            try {
+                const response = await fetch('/RFID/setup-pn532', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    setupStatus.innerHTML = `<p style="color: green;">✅ Setup successful: ${result.message}</p>`;
+                    isSetup = true;
+                    updateWriteButtonState();
+                } else {
+                    setupStatus.innerHTML = `<p style="color: red;">❌ Setup failed: ${result.error}</p>`;
+                }
+            } catch (error) {
+                setupStatus.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+            } finally {
+                setupBtn.disabled = false;
+            }
+        });
+
+        // Validate UID input
+        newUidInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^0-9a-fA-F]/g, '');
+            if (value.length > 8) {
+                value = value.substring(0, 8);
+            }
+            e.target.value = value;
+            updateWriteButtonState();
+        });
+
+        function updateWriteButtonState() {
+            const isValidUid = /^[0-9a-fA-F]{8}$/.test(newUidInput.value);
+            writeBtn.disabled = !isSetup || !isValidUid;
+        }
+
+        // Write UID
+        writeBtn.addEventListener('click', async () => {
+            const newUid = newUidInput.value.toLowerCase();
+            
+            if (!newUid || newUid.length !== 8) {
+                writeStatus.innerHTML = '<p style="color: red;">Please enter a valid 8-character hex UID.</p>';
+                return;
+            }
+            
+            writeBtn.disabled = true;
+            writeStatus.innerHTML = '<p>Writing UID... Please keep the card on the reader.</p>';
+            writeResult.style.display = 'none';
+            
+            try {
+                const response = await fetch('/RFID/write-uid', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        card_data: {
+                            uid: newUid
+                        },
+                        save_to_db: false
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    writeStatus.innerHTML = '<p style="color: green;">✅ UID written successfully!</p>';
+                    writeResultMessage.textContent = result.message;
+                    writeResult.style.display = 'block';
+                    
+                    // Reset for next operation
+                    newUidInput.value = '';
+                    updateWriteButtonState();
+                } else {
+                    writeStatus.innerHTML = `<p style="color: red;">❌ Write failed: ${result.error}</p>`;
+                }
+            } catch (error) {
+                writeStatus.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+            } finally {
+                updateWriteButtonState();
+            }
+        });
+
+        // Initial button state
+        updateWriteButtonState();
+    </script>
+</body>
+</html>
