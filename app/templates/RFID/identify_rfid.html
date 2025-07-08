@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <title>Identify HF RFID Card - HackMaster Pi</title>
+    <meta name="theme-color" content="#0f0f17">
+</head>
+<body>
+    <h1>Identify HF RFID Card</h1>
+    <p>Place your HF RFID card on the reader to identify it.</p>
+    
+    <h2>1. Setup PN532</h2>
+    <button id="setup-btn">Setup</button>
+    <div id="setup-status"></div>
+
+    <h2>2. Identify HF RFID Card</h2>
+    <button id="identify-btn" disabled>Identify</button>
+    <div id="identify-status"></div>
+    
+    <div id="card-info" style="display: none;">
+        <h3>Card Information</h3>
+        <p><strong>UID:</strong> <span id="card-uid"></span></p>
+        <p><strong>UID Length:</strong> <span id="card-uid-length"></span></p>
+        <p><strong>Card Type:</strong> <span id="card-type"></span></p>
+    </div>
+
+    <script>
+        const setupBtn = document.getElementById('setup-btn');
+        const identifyBtn = document.getElementById('identify-btn');
+        const setupStatus = document.getElementById('setup-status');
+        const identifyStatus = document.getElementById('identify-status');
+        const cardInfo = document.getElementById('card-info');
+        const cardUid = document.getElementById('card-uid');
+        const cardUidLength = document.getElementById('card-uid-length');
+        const cardType = document.getElementById('card-type');
+
+        let isSetup = false;
+        let isIdentifying = false;
+
+        // Setup PN532
+        setupBtn.addEventListener('click', async () => {
+            setupBtn.disabled = true;
+            setupStatus.innerHTML = '<p>Setting up PN532...</p>';
+            
+            try {
+                const response = await fetch('/RFID/setup-pn532', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    setupStatus.innerHTML = `<p style="color: green;">✅ Setup successful: ${result.message}</p>`;
+                    isSetup = true;
+                    identifyBtn.disabled = false;
+                } else {
+                    setupStatus.innerHTML = `<p style="color: red;">❌ Setup failed: ${result.error}</p>`;
+                }
+            } catch (error) {
+                setupStatus.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+            } finally {
+                setupBtn.disabled = false;
+            }
+        });
+
+        // Identify RFID Card
+        identifyBtn.addEventListener('click', async () => {
+            if (!isSetup) {
+                identifyStatus.innerHTML = '<p style="color: red;">Please setup PN532 first!</p>';
+                return;
+            }
+            
+            if (isIdentifying) {
+                // Stop identifying
+                isIdentifying = false;
+                identifyBtn.textContent = 'Identify';
+                identifyStatus.innerHTML = '<p>Identification stopped.</p>';
+                cardInfo.style.display = 'none';
+                return;
+            }
+            
+            // Start identifying
+            isIdentifying = true;
+            identifyBtn.textContent = 'Stop';
+            identifyStatus.innerHTML = '<p>Waiting for card... Please place your card on the reader.</p>';
+            cardInfo.style.display = 'none';
+            
+            while (isIdentifying) {
+                try {
+                    const response = await fetch('/RFID/identify-rfid', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        identifyStatus.innerHTML = '<p style="color: green;">✅ Card found!</p>';
+                        
+                        // Display card information
+                        cardUid.textContent = result.uid;
+                        cardUidLength.textContent = result.uid_length;
+                        cardType.textContent = result.type.join(', ');
+                        cardInfo.style.display = 'block';
+                        
+                        // Stop identifying after finding a card
+                        isIdentifying = false;
+                        identifyBtn.textContent = 'Identify';
+                        
+                        break;
+                    } else {
+                        // Continue waiting for card
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                } catch (error) {
+                    identifyStatus.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                    isIdentifying = false;
+                    identifyBtn.textContent = 'Identify';
+                    break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
