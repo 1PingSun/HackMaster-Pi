@@ -8,23 +8,60 @@
     <meta name="theme-color" content="#0f0f17">
 </head>
 <body>
-    <h1>Identify HF RFID Card</h1>
-    
-    <h2>1. Setup PN532</h2>
-    <button id="setup-btn">Setup</button>
-    <div id="setup-status"></div>
+    <div class="container">
+        <div class="header-container">
+            <a href="/" class="back-button">← BACK</a>
+            <h1>Identify HF RFID Card</h1>
+        </div>
+        
+        <div class="info-guide">
+            <h3>RFID Card Identifier</h3>
+            <p>This tool identifies HF RFID cards and displays their UID, type, and other information. Place your card on the PN532 reader to begin scanning.</p>
+            <p><strong>Note:</strong> Supports ISO14443A compatible cards including Mifare Classic, Mifare Ultralight, and NTAG series.</p>
+        </div>
+        
+        <div class="wifi-cracker-container">
+            <div class="wifi-cracker-section" id="setup-section">
+                <h2>1. Setup PN532</h2>
+                <div class="wifi-controls">
+                    <button id="setup-btn" class="wifi-button">Setup</button>
+                </div>
+                <div id="setup-status" class="wifi-status"></div>
+            </div>
 
-    <h2>2. Place your HF RFID card on the reader to identify it.</h2>
+            <div class="wifi-cracker-section" id="place-card-section">
+                <h2>2. Place your HF RFID card on the reader</h2>
+                <p>Position your RFID card on the PN532 reader for identification.</p>
+            </div>
 
-    <h2>3. Identify HF RFID Card</h2>
-    <button id="identify-btn" disabled>Identify</button>
-    <div id="identify-status"></div>
-    
-    <div id="card-info" style="display: none;">
-        <h3>Card Information</h3>
-        <p><strong>UID:</strong> <span id="card-uid"></span></p>
-        <p><strong>UID Length:</strong> <span id="card-uid-length"></span></p>
-        <p><strong>Card Type:</strong> <span id="card-type"></span></p>
+            <div class="wifi-cracker-section" id="identify-section">
+                <h2>3. Identify HF RFID Card</h2>
+                <div class="wifi-controls">
+                    <button id="identify-btn" class="wifi-button" disabled>Identify</button>
+                </div>
+                <div id="identify-status" class="wifi-status"></div>
+                
+                <div id="card-info" class="result-card" style="display: none;">
+                    <div class="result-title">
+                        <h3>Card Information</h3>
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-details">
+                            <span class="profile-label">UID:</span>
+                            <span class="profile-value" id="card-uid"></span>
+                        </div>
+                        <div class="profile-details">
+                            <span class="profile-label">UID Length:</span>
+                            <span class="profile-value" id="card-uid-length"></span>
+                        </div>
+                        <div class="profile-details">
+                            <span class="profile-label">Card Type:</span>
+                            <span class="profile-value" id="card-type"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -44,6 +81,7 @@
         setupBtn.addEventListener('click', async () => {
             setupBtn.disabled = true;
             setupStatus.innerHTML = '<p>Setting up PN532...</p>';
+            setupStatus.className = 'wifi-status info';
             
             try {
                 const response = await fetch('/RFID/setup-pn532', {
@@ -56,14 +94,18 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    setupStatus.innerHTML = `<p style="color: green;">✅ Setup successful: ${result.message}</p>`;
+                    setupStatus.innerHTML = `<p>✅ Setup successful: ${result.message}</p>`;
+                    setupStatus.className = 'wifi-status success';
+                    document.getElementById('setup-section').classList.add('completed');
                     isSetup = true;
                     identifyBtn.disabled = false;
                 } else {
-                    setupStatus.innerHTML = `<p style="color: red;">❌ Setup failed: ${result.error}</p>`;
+                    setupStatus.innerHTML = `<p>❌ Setup failed: ${result.error}</p>`;
+                    setupStatus.className = 'wifi-status error';
                 }
             } catch (error) {
-                setupStatus.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                setupStatus.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+                setupStatus.className = 'wifi-status error';
             } finally {
                 setupBtn.disabled = false;
             }
@@ -72,7 +114,8 @@
         // Identify RFID Card
         identifyBtn.addEventListener('click', async () => {
             if (!isSetup) {
-                identifyStatus.innerHTML = '<p style="color: red;">Please setup PN532 first!</p>';
+                identifyStatus.innerHTML = '<p>Please setup PN532 first!</p>';
+                identifyStatus.className = 'wifi-status error';
                 return;
             }
             
@@ -80,16 +123,22 @@
                 // Stop identifying
                 isIdentifying = false;
                 identifyBtn.textContent = 'Identify';
+                identifyBtn.className = 'wifi-button';
                 identifyStatus.innerHTML = '<p>Identification stopped.</p>';
+                identifyStatus.className = 'wifi-status';
                 cardInfo.style.display = 'none';
+                document.getElementById('identify-section').classList.remove('active');
                 return;
             }
             
             // Start identifying
             isIdentifying = true;
             identifyBtn.textContent = 'Stop';
+            identifyBtn.className = 'wifi-button danger';
             identifyStatus.innerHTML = '<p>Waiting for card... Please place your card on the reader.</p>';
+            identifyStatus.className = 'wifi-status info';
             cardInfo.style.display = 'none';
+            document.getElementById('identify-section').classList.add('active');
             
             while (isIdentifying) {
                 try {
@@ -103,7 +152,8 @@
                     const result = await response.json();
                     
                     if (result.success) {
-                        identifyStatus.innerHTML = '<p style="color: green;">✅ Card found!</p>';
+                        identifyStatus.innerHTML = '<p>✅ Card found!</p>';
+                        identifyStatus.className = 'wifi-status success';
                         
                         // Display card information
                         cardUid.textContent = result.uid;
@@ -114,6 +164,9 @@
                         // Stop identifying after finding a card
                         isIdentifying = false;
                         identifyBtn.textContent = 'Identify';
+                        identifyBtn.className = 'wifi-button';
+                        document.getElementById('identify-section').classList.remove('active');
+                        document.getElementById('identify-section').classList.add('completed');
                         
                         break;
                     } else {
@@ -121,9 +174,12 @@
                         await new Promise(resolve => setTimeout(resolve, 500));
                     }
                 } catch (error) {
-                    identifyStatus.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                    identifyStatus.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+                    identifyStatus.className = 'wifi-status error';
                     isIdentifying = false;
                     identifyBtn.textContent = 'Identify';
+                    identifyBtn.className = 'wifi-button';
+                    document.getElementById('identify-section').classList.remove('active');
                     break;
                 }
             }
