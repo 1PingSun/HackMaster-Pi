@@ -54,7 +54,7 @@ def identify_rfid(request: Request):
 @router.get("/write-uid", response_class=HTMLResponse)
 def write_uid(request: Request):
     return templates.TemplateResponse(
-        "RFID/write_uid.html",
+        "RFID/write-uid.html",
         {"request": request, "message": "Write UID to HF RFID CUID Card"}
     )
 
