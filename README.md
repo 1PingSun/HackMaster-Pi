@@ -22,12 +22,14 @@ If you find this project useful, please give it a star on GitHub. Your support i
 
 - [x] Beacon Emulator
 - [x] AirPods Emulator
-- [x] Wi-Fi Password Cracker
 - [x] Password Wordlist Generator
+- [x] Wi-Fi Password Cracker
+- [x] Identify RFID Card
+- [x] Copy RFID Card UID
 - [ ] AP Emulator
 - [ ] Wi-Fi AP Rickroll
 - [ ] IR Function
-- [ ] RFID Function
+- [ ] RFIF NTAG21x Emulate
 
 Learn more: [https://github.com/users/1PingSun/projects/1](https://github.com/users/1PingSun/projects/1)
 
