@@ -1,4 +1,4 @@
-[![License MIT](https://img.shields.io/badge/LICENSE-MIT-green)](https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/refs/heads/main/LICENSE)
+[![License MIT](https://img.shields.io/badge/LICENSE-MIT-green)](https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/refs/heads/main/LICENSE) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/1PingSun/HackMaster-Pi)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/icon/Wide/PNG-Dark.png" />
