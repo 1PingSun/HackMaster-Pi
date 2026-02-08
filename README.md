@@ -1,9 +1,9 @@
 [![License MIT](https://img.shields.io/badge/LICENSE-MIT-green)](https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/refs/heads/main/LICENSE) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/1PingSun/HackMaster-Pi)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/main/assets/icon/Wide/PNG-Dark.png" />
-  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/main/assets/icon/Wide/PNG-Light.png" />
-  <img alt="Logo" src="https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/main/assets/icon/Wide/PNG-Light.png" />
+  <source alt="HackMaster Pi Logo" media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/main/assets/icon/Wide/PNG-Dark.png" />
+  <source alt="HackMaster Pi Logo" media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/main/assets/icon/Wide/PNG-Light.png" />
+  <img alt="HackMaster Pi Logo" src="https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/main/assets/icon/Wide/PNG-Light.png" />
 </picture>
 
 ---
