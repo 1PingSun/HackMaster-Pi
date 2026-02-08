@@ -1,9 +1,9 @@
 [![License MIT](https://img.shields.io/badge/LICENSE-MIT-green)](https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/refs/heads/main/LICENSE) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/1PingSun/HackMaster-Pi)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/icon/Wide/PNG-Dark.png" />
-  <source media="(prefers-color-scheme: light)" srcset="assets/icon/Wide/PNG-Light.png" />
-  <img alt="Logo" src="assets/icon/Wide/PNG-Light.png" />
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/main/assets/icon/Wide/PNG-Dark.png" />
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/main/assets/icon/Wide/PNG-Light.png" />
+  <img alt="Logo" src="https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/main/assets/icon/Wide/PNG-Light.png" />
 </picture>
 
 ---
@@ -12,7 +12,7 @@ HackMaster Pi is an open-source IoT security testing tool based on the Raspberry
 
 HackMaster Pi              |  WebUI
 :-------------------------:|:-------------------------:
-![](assets/hackmaster-pi/HackMaster-Pi.jpg) | ![](assets/webUI/image.png)
+![HackMaster Pi](https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/main/assets/hackmaster-pi/HackMaster-Pi.jpg) | ![WebUI](https://raw.githubusercontent.com/1PingSun/HackMaster-Pi/main/assets/webUI/image.png)
 
 If you have any suggestions for improvements or find any bugs, feel free to fork the repository and submit a pull request. We appreciate your contributions!
 
