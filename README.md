@@ -33,6 +33,15 @@ If you find this project useful, please give it a star on GitHub. Your support i
 
 Learn more: [https://github.com/users/1PingSun/projects/1](https://github.com/users/1PingSun/projects/1)
 
+## 🛡️ Defense Mode (NEW)
+
+HackMaster-Pi now includes a Defense Mode for educational IoT security analysis.
+This mode detects common Wi-Fi and RFID security weaknesses without performing attacks.
+
+✔ Legal
+✔ Ethical
+✔ Blue Team Learning
+
 ## Installation and Usage
 
 To install and use HackMaster Pi, please read the tutorial here: [https://hackmasterpi.org](https://hackmasterpi.org)

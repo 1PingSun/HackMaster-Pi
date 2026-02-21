@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Dict, List
 from .mylib.WeakPasswordGenerater.main import PasswordGenerator
 from .mylib.RFIDlib import main as RFIDlib
+from .mylib.defense.defense_manager import DefenseManager
 import os
 import time
 import json
@@ -99,3 +100,32 @@ async def write_uid_post(request: Request, write_request: WriteCardRequest):
 
     except Exception as e:
         return JSONResponse(content={"success": False, "error": str(e)})
+
+@router.post("/analyze")
+async def analyze_rfid(request: Request):
+    """
+    分析 RFID 卡片的安全性
+    """
+    try:
+        data = await request.json()
+        card_info = data.get("card_info", {})
+        
+        # 創建 DefenseManager 實例
+        defense_manager = DefenseManager()
+        
+        # 執行 RFID 防禦分析
+        result = defense_manager.run_rfid_defense(card_info)
+        
+        return JSONResponse(content={
+            "success": True,
+            "module": result["module"],
+            "issues": result["issues"],
+            "threat": result["threat"]
+        })
+    except Exception as e:
+        return JSONResponse(content={
+            "success": False,
+            "error": str(e),
+            "issues": [],
+            "threat": {"score": 0, "status": "UNKNOWN"}
+        })

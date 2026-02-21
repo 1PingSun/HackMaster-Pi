@@ -10,6 +10,7 @@ import uuid
 import json
 from .mylib.WeakPasswordGenerater.main import PasswordGenerator
 from .mylib.ap_scan import scan_wifi_networks
+from .mylib.defense.defense_manager import DefenseManager
 import random
 import asyncio
 import csv
@@ -1008,4 +1009,31 @@ async def crack_password(request: CrackPasswordRequest):
         return {
             "success": False,
             "message": f"Error during password cracking: {str(e)}"
+        }
+
+@router.post("/defense/scan")
+async def defense_scan(request: ScanWifiRequest):
+    """
+    使用 DefenseManager 掃描並分析 Wi-Fi 威脅
+    """
+    try:
+        # 創建 DefenseManager 實例
+        defense_manager = DefenseManager(iface=request.interface)
+        
+        # 執行 Wi-Fi 防禦掃描和分析
+        result = defense_manager.run_wifi_defense()
+        
+        return {
+            "success": True,
+            "module": result["module"],
+            "issues": result["issues"],
+            "threat": result["threat"],
+            "interface": request.interface
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to scan and analyze Wi-Fi threats: {str(e)}",
+            "issues": [],
+            "threat": {"score": 0, "status": "UNKNOWN"}
         }

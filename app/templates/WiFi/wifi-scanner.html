@@ -4,357 +4,416 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-    <title>Wi-Fi Scanner - HackMaster Pi</title>
+    <title>Wi-Fi Defense Scanner - HackMaster Pi</title>
     <meta name="theme-color" content="#0f0f17">
+    <style>
+        .threat-score-display {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .threat-score {
+            font-size: 72px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .threat-status {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .threat-bar-container {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .threat-bar {
+            height: 100%;
+            transition: width 0.5s ease, background-color 0.5s ease;
+        }
+
+        .threat-bar.threat-safe {
+            background: linear-gradient(90deg, #2ed573, #7bed9f);
+        }
+
+        .threat-bar.threat-warning {
+            background: linear-gradient(90deg, #ffa502, #ff6348);
+        }
+
+        .threat-bar.threat-critical {
+            background: linear-gradient(90deg, #ff4757, #ff6b81);
+        }
+
+        .issues-container {
+            margin-top: 30px;
+        }
+
+        .issues-container h3 {
+            color: #00ff88;
+            margin-bottom: 15px;
+        }
+
+        .issue-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid #00ff88;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+
+        .issue-item.issue-critical {
+            border-left-color: #ff4757;
+        }
+
+        .issue-item.issue-high {
+            border-left-color: #ff6348;
+        }
+
+        .issue-item.issue-medium {
+            border-left-color: #ffa502;
+        }
+
+        .issue-item.issue-low {
+            border-left-color: #70a1ff;
+        }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .issue-type {
+            font-weight: bold;
+            font-size: 16px;
+            color: #fff;
+        }
+
+        .issue-risk {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .risk-critical {
+            background: #ff4757;
+            color: #fff;
+        }
+
+        .risk-high {
+            background: #ff6348;
+            color: #fff;
+        }
+
+        .risk-medium {
+            background: #ffa502;
+            color: #fff;
+        }
+
+        .risk-low {
+            background: #70a1ff;
+            color: #fff;
+        }
+
+        .issue-detail {
+            color: #ddd;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .issue-recommendation {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 3px;
+            color: #00ff88;
+            font-size: 14px;
+        }
+
+        .no-issues {
+            text-align: center;
+            padding: 30px;
+            color: #2ed573;
+            font-size: 18px;
+        }
+
+        .wifi-input {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: #fff;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .wifi-input:focus {
+            outline: none;
+            border-color: #00ff88;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="header-container">
             <a href="/" class="back-button">← BACK</a>
-            <h1>Wi-Fi Scanner</h1>
+            <h1>Wi-Fi Defense Scanner</h1>
         </div>
         
         <div class="info-guide">
-            <h3>Wi-Fi Network Scanner</h3>
-            <p>This tool scans for nearby Wi-Fi networks and displays detailed information about them, including signal strength, security settings, frequency, and more.</p>
-            <p><strong>Note:</strong> Scanning for networks may take a few seconds to complete. Nearby networks will be automatically sorted by signal strength.</p>
+            <h3>Wi-Fi Defense & Threat Analysis</h3>
+            <p>This tool scans for nearby Wi-Fi networks, analyzes potential security threats, and provides threat scoring based on detected vulnerabilities.</p>
+            <p><strong>Features:</strong> Open network detection, Evil Twin detection, threat scoring system</p>
         </div>
-        
-        <div class="scan-options">
-            <div class="scan-option">
-                <input type="checkbox" id="scan-2g" checked>
-                <label for="scan-2g">2.4 GHz</label>
-            </div>
-            <div class="scan-option">
-                <input type="checkbox" id="scan-5g" checked>
-                <label for="scan-5g">5 GHz</label>
-            </div>
-            <div class="scan-option">
-                <input type="checkbox" id="scan-6g">
-                <label for="scan-6g">6 GHz</label>
-            </div>
-            <div class="scan-option">
-                <input type="checkbox" id="show-hidden">
-                <label for="show-hidden">Show Hidden Networks</label>
-            </div>
-        </div>
-        
-        <div class="controls-container">
-            <button id="scan-button" class="start-btn">
-                <span id="scan-button-text">SCAN NETWORKS</span>
-                <span class="loading" id="scan-spinner" style="display: none;"></span>
-            </button>
-            <div class="counter" id="networks-count">0 NETWORKS</div>
-        </div>
-        
-        <div class="status-indicator" id="scan-status">READY TO SCAN</div>
-        
-        <div id="scan-summary" class="scan-summary" style="display: none;">
-            <h3>Scan Summary</h3>
-            <div class="summary-grid">
-                <div class="summary-item">
-                    <div class="summary-value" id="total-networks">0</div>
-                    <div class="summary-label">TOTAL NETWORKS</div>
+
+        <div class="wifi-cracker-container">
+            <!-- Step 1: Select Network Interface -->
+            <div class="wifi-cracker-section" id="interface-section">
+                <h2>1. Select Network Interface</h2>
+                <div class="wifi-controls">
+                    <button id="list-interfaces-btn" class="wifi-button">List Interfaces</button>
                 </div>
-                <div class="summary-item">
-                    <div class="summary-value" id="open-networks">0</div>
-                    <div class="summary-label">OPEN NETWORKS</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-value" id="2g-networks">0</div>
-                    <div class="summary-label">2.4 GHz NETWORKS</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-value" id="5g-networks">0</div>
-                    <div class="summary-label">5 GHz NETWORKS</div>
+                <div id="interface-status" class="wifi-status"></div>
+                <div id="interface-select-container" style="display: none; margin-top: 10px;">
+                    <select id="interface-select" class="wifi-input">
+                        <option value="">Select an interface...</option>
+                    </select>
                 </div>
             </div>
-        </div>
-        
-        <div class="networks-container" id="networks-container">
-            <!-- Networks will be listed here -->
+
+            <!-- Step 2: Scan & Analyze -->
+            <div class="wifi-cracker-section" id="scan-section">
+                <h2>2. Scan & Analyze Wi-Fi Networks</h2>
+                <div class="wifi-controls">
+                    <button id="scan-button" class="wifi-button" disabled>
+                        <span id="scan-button-text">SCAN NETWORKS</span>
+                        <span class="loading" id="scan-spinner" style="display: none;"></span>
+                    </button>
+                </div>
+                <div id="scan-status" class="wifi-status"></div>
+            </div>
+
+            <!-- Step 3: Threat Analysis Results -->
+            <div class="wifi-cracker-section" id="threat-section" style="display: none;">
+                <h2>3. Threat Analysis</h2>
+                
+                <!-- Threat Score Card -->
+                <div id="threat-score-card" class="result-card">
+                    <div class="result-title">
+                        <h3>Threat Level</h3>
+                    </div>
+                    <div class="profile-info">
+                        <div class="threat-score-display">
+                            <div id="threat-score" class="threat-score">0</div>
+                            <div id="threat-status" class="threat-status">SAFE</div>
+                        </div>
+                        <div class="threat-bar-container">
+                            <div id="threat-bar" class="threat-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Issues List -->
+                <div id="issues-container" class="issues-container">
+                    <h3>Security Issues Detected</h3>
+                    <div id="issues-list"></div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // DOM Elements
+            const listInterfacesBtn = document.getElementById('list-interfaces-btn');
+            const interfaceStatus = document.getElementById('interface-status');
+            const interfaceSelectContainer = document.getElementById('interface-select-container');
+            const interfaceSelect = document.getElementById('interface-select');
             const scanButton = document.getElementById('scan-button');
             const scanButtonText = document.getElementById('scan-button-text');
             const scanSpinner = document.getElementById('scan-spinner');
             const scanStatus = document.getElementById('scan-status');
-            const networksContainer = document.getElementById('networks-container');
-            const networksCount = document.getElementById('networks-count');
-            const scanSummary = document.getElementById('scan-summary');
-            const totalNetworks = document.getElementById('total-networks');
-            const openNetworks = document.getElementById('open-networks');
-            const networks2g = document.getElementById('2g-networks');
-            const networks5g = document.getElementById('5g-networks');
-            const scan2g = document.getElementById('scan-2g');
-            const scan5g = document.getElementById('scan-5g');
-            const scan6g = document.getElementById('scan-6g');
-            const showHidden = document.getElementById('show-hidden');
+            const threatSection = document.getElementById('threat-section');
+            const threatScore = document.getElementById('threat-score');
+            const threatStatus = document.getElementById('threat-status');
+            const threatBar = document.getElementById('threat-bar');
+            const issuesList = document.getElementById('issues-list');
             
-            // 狀態變數
+            // State variables
             let isScanning = false;
-            let scanResults = [];
-            
-            // 掃描按鈕點擊事件
-            scanButton.addEventListener('click', function() {
-                if (isScanning) return;
-                
-                // 檢查至少選擇一個頻段
-                if (!scan2g.checked && !scan5g.checked && !scan6g.checked) {
-                    scanStatus.textContent = 'ERROR: PLEASE SELECT AT LEAST ONE FREQUENCY BAND';
-                    scanStatus.className = 'status-indicator status-stopped';
-                    return;
+            let selectedInterface = '';
+
+            // List Network Interfaces
+            listInterfacesBtn.addEventListener('click', async function() {
+                listInterfacesBtn.disabled = true;
+                interfaceStatus.innerHTML = '<p>Loading network interfaces...</p>';
+                interfaceStatus.className = 'wifi-status info';
+
+                try {
+                    const response = await fetch('/WiFi/interface/details');
+                    const result = await response.json();
+
+                    if (result.success && result.adapters.length > 0) {
+                        interfaceStatus.innerHTML = `<p>✅ Found ${result.adapters.length} network interface(s)</p>`;
+                        interfaceStatus.className = 'wifi-status success';
+                        
+                        // Populate interface dropdown
+                        interfaceSelect.innerHTML = '<option value="">Select an interface...</option>';
+                        result.adapters.forEach(adapter => {
+                            const option = document.createElement('option');
+                            option.value = adapter;
+                            option.textContent = adapter;
+                            interfaceSelect.appendChild(option);
+                        });
+                        
+                        interfaceSelectContainer.style.display = 'block';
+                        document.getElementById('interface-section').classList.add('completed');
+                    } else {
+                        interfaceStatus.innerHTML = '<p>❌ No network interfaces found</p>';
+                        interfaceStatus.className = 'wifi-status error';
+                    }
+                } catch (error) {
+                    interfaceStatus.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+                    interfaceStatus.className = 'wifi-status error';
+                } finally {
+                    listInterfacesBtn.disabled = false;
                 }
-                
-                startScan();
             });
-            
-            // 開始掃描
-            function startScan() {
-                // 更新 UI 狀態
+
+            // Handle Interface Selection
+            interfaceSelect.addEventListener('change', function() {
+                selectedInterface = this.value;
+                if (selectedInterface) {
+                    scanButton.disabled = false;
+                    scanStatus.innerHTML = `<p>Interface selected: ${selectedInterface}</p>`;
+                    scanStatus.className = 'wifi-status success';
+                } else {
+                    scanButton.disabled = true;
+                    scanStatus.innerHTML = '';
+                }
+            });
+
+            // Scan & Analyze Networks
+            scanButton.addEventListener('click', async function() {
+                if (isScanning || !selectedInterface) return;
+
                 isScanning = true;
                 scanButtonText.textContent = 'SCANNING...';
                 scanSpinner.style.display = 'inline-block';
                 scanButton.disabled = true;
-                scanStatus.textContent = 'SCANNING FOR NETWORKS...';
-                scanStatus.className = 'status-indicator status-running';
-                networksContainer.innerHTML = '';
-                scanSummary.style.display = 'none';
-                
-                // 準備掃描設定
-                const scanConfig = {
-                    bands: {
-                        '2.4GHz': scan2g.checked,
-                        '5GHz': scan5g.checked,
-                        '6GHz': scan6g.checked
-                    },
-                    show_hidden: showHidden.checked
-                };
-                
-                // 發送掃描請求
-                fetch('/WiFi/scan', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(scanConfig)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // 儲存並處理掃描結果
-                        scanResults = data.networks || [];
-                        displayNetworks(scanResults);
-                        updateScanSummary(scanResults);
+                scanStatus.innerHTML = '<p>Scanning for networks and analyzing threats...</p>';
+                scanStatus.className = 'wifi-status info';
+                threatSection.style.display = 'none';
+
+                try {
+                    const response = await fetch('/WiFi/defense/scan', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            interface: selectedInterface,
+                            timeout: 10
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        scanStatus.innerHTML = '<p>✅ Scan complete!</p>';
+                        scanStatus.className = 'wifi-status success';
+                        document.getElementById('scan-section').classList.add('completed');
+                        
+                        // Display threat analysis
+                        displayThreatAnalysis(result);
                     } else {
-                        throw new Error(data.message || 'Scan failed');
+                        throw new Error(result.message || 'Scan failed');
                     }
-                })
-                .catch(error => {
+                } catch (error) {
                     console.error('Error scanning networks:', error);
-                    scanStatus.textContent = 'ERROR: ' + error.message.toUpperCase();
-                    scanStatus.className = 'status-indicator status-stopped';
-                })
-                .finally(() => {
-                    // 重置 UI 狀態
+                    scanStatus.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+                    scanStatus.className = 'wifi-status error';
+                } finally {
                     isScanning = false;
                     scanButtonText.textContent = 'SCAN NETWORKS';
                     scanSpinner.style.display = 'none';
                     scanButton.disabled = false;
-                });
-            }
-            
-            // 顯示網路列表
-            function displayNetworks(networks) {
-                // 清空容器
-                networksContainer.innerHTML = '';
-                
-                // 更新計數
-                networksCount.textContent = networks.length + ' NETWORKS';
-                
-                // 如果沒有找到網路
-                if (networks.length === 0) {
-                    scanStatus.textContent = 'NO NETWORKS FOUND';
-                    networksContainer.innerHTML = '<div class="no-profiles">No networks found in range</div>';
-                    return;
                 }
+            });
+
+            // Display Threat Analysis
+            function displayThreatAnalysis(result) {
+                const score = result.threat.score;
+                const status = result.threat.status;
+                const issues = result.issues || [];
+
+                // Update threat score
+                threatScore.textContent = score;
+                threatStatus.textContent = status;
                 
-                // 更新狀態
-                scanStatus.textContent = `SCAN COMPLETE: FOUND ${networks.length} NETWORKS`;
+                // Update threat bar
+                threatBar.style.width = score + '%';
                 
-                // 顯示每個網路
-                networks.forEach((network, index) => {
-                    // 創建網路卡片
-                    const networkElement = document.createElement('div');
-                    networkElement.className = 'network-item';
-                    
-                    // 根據安全類型添加顏色
-                    if (network.security.includes('WPA3')) {
-                        networkElement.classList.add('security-wpa3');
-                    } else if (network.security.includes('WPA2')) {
-                        networkElement.classList.add('security-wpa2');
-                    } else if (network.security.includes('WPA')) {
-                        networkElement.classList.add('security-wpa');
-                    } else if (network.security.includes('WEP')) {
-                        networkElement.classList.add('security-wep');
-                    } else {
-                        networkElement.classList.add('security-open');
-                    }
-                    
-                    // 計算信號強度百分比
-                    const signalPercent = Math.min(100, Math.max(0, (network.signal_strength + 100) * 1.1));
-                    
-                    // 確定頻段標籤
-                    let bandClass = 'band-2g';
-                    if (network.frequency >= 5000 && network.frequency < 6000) {
-                        bandClass = 'band-5g';
-                    } else if (network.frequency >= 6000) {
-                        bandClass = 'band-6g';
-                    }
-                    
-                    // 頻段顯示文字
-                    let bandText = '2.4 GHz';
-                    if (network.frequency >= 5000 && network.frequency < 6000) {
-                        bandText = '5 GHz';
-                    } else if (network.frequency >= 6000) {
-                        bandText = '6 GHz';
-                    }
-                    
-                    // 生成 SSID 顯示
-                    let ssidDisplay = network.ssid;
-                    if (!network.ssid || network.ssid === '<hidden>') {
-                        ssidDisplay = '<span class="hidden-ssid">Hidden Network</span>';
-                    }
-                    
-                    // 設置網路卡片內容
-                    networkElement.innerHTML = `
-                        <div class="network-header">
-                            <div class="network-name">
-                                <span class="band-indicator ${bandClass}">${bandText}</span>
-                                ${ssidDisplay}
-                            </div>
-                            <div class="network-signal">
-                                ${network.signal_strength} dBm
-                                <div class="signal-strength">
-                                    <div class="signal-bar" style="width: ${signalPercent}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="network-details">
-                            <div class="network-detail">
-                                <span class="detail-label">SECURITY</span>
-                                <span class="detail-value">${network.security || 'Open'}</span>
-                            </div>
-                            <div class="network-detail">
-                                <span class="detail-label">CHANNEL</span>
-                                <span class="detail-value">${network.channel || 'N/A'}</span>
-                            </div>
-                            <div class="network-detail">
-                                <span class="detail-label">FREQUENCY</span>
-                                <span class="detail-value">${network.frequency ? network.frequency + ' MHz' : 'N/A'}</span>
-                            </div>
-                            <div class="network-detail">
-                                <span class="detail-label">MAC ADDRESS</span>
-                                <span class="detail-value">${network.bssid || 'N/A'}</span>
-                            </div>
-                        </div>
-                        <button class="toggle-details" data-index="${index}">SHOW ADVANCED DETAILS</button>
-                        <div class="advanced-details" id="details-${index}">
-                            <div class="network-details">
-                                <div class="network-detail">
-                                    <span class="detail-label">VENDOR</span>
-                                    <span class="detail-value">${network.vendor || 'Unknown'}</span>
-                                </div>
-                                <div class="network-detail">
-                                    <span class="detail-label">WIDTH</span>
-                                    <span class="detail-value">${network.width ? network.width + ' MHz' : 'N/A'}</span>
-                                </div>
-                                <div class="network-detail">
-                                    <span class="detail-label">FIRST SEEN</span>
-                                    <span class="detail-value">${network.first_seen || 'Just now'}</span>
-                                </div>
-                                <div class="network-detail">
-                                    <span class="detail-label">LAST SEEN</span>
-                                    <span class="detail-value">${network.last_seen || 'Just now'}</span>
-                                </div>
-                            </div>
-                            ${network.ssid && !network.hidden ? `
-                            <div class="qr-code">
-                                <img src="data:image/png;base64,${generateQRCode(network)}" alt="Wi-Fi QR Code">
-                                <div class="detail-label">Wi-Fi Connect QR Code</div>
-                            </div>
-                            ` : ''}
-                        </div>
-                    `;
-                    
-                    // 添加到容器
-                    networksContainer.appendChild(networkElement);
-                });
-                
-                // 添加詳細信息切換事件
-                document.querySelectorAll('.toggle-details').forEach(button => {
-                    button.addEventListener('click', function() {
-                        const index = this.getAttribute('data-index');
-                        const detailsDiv = document.getElementById(`details-${index}`);
+                // Set color based on status
+                threatBar.className = 'threat-bar';
+                if (status === 'CRITICAL') {
+                    threatBar.classList.add('threat-critical');
+                    threatStatus.style.color = '#ff4757';
+                } else if (status === 'WARNING') {
+                    threatBar.classList.add('threat-warning');
+                    threatStatus.style.color = '#ffa502';
+                } else {
+                    threatBar.classList.add('threat-safe');
+                    threatStatus.style.color = '#2ed573';
+                }
+
+                // Display issues
+                if (issues.length === 0) {
+                    issuesList.innerHTML = '<div class="no-issues">✅ No security issues detected</div>';
+                } else {
+                    issuesList.innerHTML = '';
+                    issues.forEach((issue, index) => {
+                        const issueElement = document.createElement('div');
+                        issueElement.className = 'issue-item issue-' + issue.risk.toLowerCase();
                         
-                        if (detailsDiv.style.display === 'block') {
-                            detailsDiv.style.display = 'none';
-                            this.textContent = 'SHOW ADVANCED DETAILS';
-                        } else {
-                            detailsDiv.style.display = 'block';
-                            this.textContent = 'HIDE ADVANCED DETAILS';
+                        let issueContent = `
+                            <div class="issue-header">
+                                <span class="issue-type">${formatIssueType(issue.type)}</span>
+                                <span class="issue-risk risk-${issue.risk.toLowerCase()}">${issue.risk}</span>
+                            </div>
+                        `;
+
+                        if (issue.ssid) {
+                            issueContent += `<div class="issue-detail"><strong>SSID:</strong> ${issue.ssid}</div>`;
                         }
+
+                        if (issue.bssids && issue.bssids.length > 0) {
+                            issueContent += `<div class="issue-detail"><strong>BSSIDs:</strong> ${issue.bssids.join(', ')}</div>`;
+                        }
+
+                        issueContent += `<div class="issue-recommendation">💡 ${issue.recommendation}</div>`;
+
+                        issueElement.innerHTML = issueContent;
+                        issuesList.appendChild(issueElement);
                     });
-                });
-                
-                // 顯示掃描摘要
-                scanSummary.style.display = 'block';
+                }
+
+                // Show threat section
+                threatSection.style.display = 'block';
             }
-            
-            // 更新掃描摘要
-            function updateScanSummary(networks) {
-                // 計算總數
-                const total = networks.length;
-                totalNetworks.textContent = total;
-                
-                // 計算開放網路數量
-                const open = networks.filter(n => !n.security || n.security === 'Open').length;
-                openNetworks.textContent = open;
-                
-                // 計算 2.4GHz 網路數量
-                const twoG = networks.filter(n => n.frequency < 5000).length;
-                networks2g.textContent = twoG;
-                
-                // 計算 5GHz 網路數量
-                const fiveG = networks.filter(n => n.frequency >= 5000 && n.frequency < 6000).length;
-                networks5g.textContent = fiveG;
+
+            // Format issue type for display
+            function formatIssueType(type) {
+                return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
             }
-            
-            // 生成 QR 碼（模擬 - 實際應該調用 API）
-            function generateQRCode(network) {
-                // 這只是一個虛擬碼，實際應該使用 API 生成
-                // WIFI:S:<SSID>;T:<WPA|WEP|>;P:<password>;;
-                return 'iVBORw0KGgoAAAANSUhEUgAAAIQAAACECAYAAABRRIOnAAAAAklEQVR4AewaftIAAAOPSURBVO3BQY4cSRLAQDLQ//8yV0c/JZCoailm4Wb2B2utP7zWeg+vtd7Da6338Frr' +
-                      'PbzWeg+vtd7Da6338FrrPbzWeg+vtd7Da6338FrrPbzWeg+vtd7Da6338FrrPbzWeg8/fEjlb6qYVG6qmFSuKiaVqeKmilOVv6niE6+13sNrrffwWus9/PBlFd+kclPFicpU' +
-                      'MVWcqEwVk8pUcaIyVXxC5ZsqvkllqviJr7Xew2ut9/Ba6z388GUVT6j8TRVPqHyi4kRlqnhC5YmKJ1S+6bXWe3it9R5ea72HH/7lVKaKE5Wp4qriROVEZao4UZkqTlROKk5' +
-                      'UpooTlf+l11rv4bXWe3it9R5++I+rOFG5qWJSmSpuqjhRmSpuqjhRmSq+SeW/7LXWe3it9R5ea72HH76s4t9M5aaKE5Wp4m9SOan4RMWJyk0V/yavtd7Da6338FrrPfzw' +
-                      'IZX/JZWbKk5UpopJ5aaKE5Wp4ptUbqo4qZhUpor/stda7+G11nt4rfUefviyipuKT6icVJyoTBVTxYnKVHFVMalMFVPFicpUMVV8QmWqmCpOVL7ptdZ7eK31Hl5rvYcfPq' +
-                      'RyVTGpnFRMKlPFpHJVcaJyojJVTCpTxaQyVUwqJxVTxaRyU8WkMlVMKjdVnKhMFZ94rfUeXmu9h9da7+GHD1VMKlcVU8WJylQxqdxUcaIyVZyoTBVTxRMqU8WJyk0VJyo3' +
-                      'FZPKVcWJylQxqXzitdZ7eK31Hl5rvYcfPqQyVUwqVxWTyknFpDJVnKhMFZPKVcWkMlVMKicVk8pUMamcVEwqU8VVxaTyhMpUcaLyTa+13sNrrffwWus9/PBLFScqVxWTyo' +
-                      'nKVHGiMlVMKp9QmSomlaniCZWp4qpiUpkqnlC5qZhUpopvUnnitdZ7eK31Hl5rvYcfvkzlpGJSuao4UZkqbqqYVG6qmFSmiqniqopJZaqYVE4qJpWrihOVm4qp4kRlqvim' +
-                      '11rv4bXWe3it9R7MDx9S+ZsqTlROKk5UpopJ5aaKSWWqmFSmiqniRGWqOFGZKk5UpooTlW+qOFGZKiaVb3qt9R5ea72H11rv4YcvU/mmihOVqeJEZaqYVE4qJpWpYlKZKi' +
-                      'aVqWJSuak4UTmpOFGZKiaVqWJSmSpOVKaKJyrfpPK3vNZ6D6+13sNrrffww5dVPKHyiYonVJ6omFSmihOVqeJE5aTiCZWp4kTlqmJSmSomlU9UTCpTxW96rfUeXmu9h9da' +
-                      '7+GH/ziVqeJE5aaKqeJE5aaKSeWkYlKZKiaVJypOVJ6ouFG5qThR+cRrrffwWus9vNZ6Dz/8y6ncVHFSMalMFVPFicpUMVWcqEwVT6g8UXGiclXxhMpNxaQyVfzEa6338F' +
-                      'rrPbzWeg8/fFnF36RyUnGiMlVMFZPKVcWkMlVMKlPFicpJxRMqU8VJxaRyUzGpnFScqEwVn3it9R5ea72H11rvwfzwWusPr7Xew2ut9/Ba6z281noPr7Xew2ut9/Ba6z28' +
-                      '1noPr7Xew2ut9/Ba6z281noPr7Xew2ut9/Ba6z281noPr7Xew78BN3tAhhExJVIAAAAASUVORK5CYII=';
-            }
-            
-            // 初始掃描
-            // startScan();
         });
     </script>
 </body>
