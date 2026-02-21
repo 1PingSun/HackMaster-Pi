@@ -6,6 +6,140 @@
     <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
     <title>Identify HF RFID Card - HackMaster Pi</title>
     <meta name="theme-color" content="#0f0f17">
+    <style>
+        .threat-score-display {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .threat-score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .threat-status {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .threat-bar-container {
+            width: 100%;
+            height: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .threat-bar {
+            height: 100%;
+            transition: width 0.5s ease, background-color 0.5s ease;
+        }
+
+        .threat-bar.threat-safe {
+            background: linear-gradient(90deg, #2ed573, #7bed9f);
+        }
+
+        .threat-bar.threat-warning {
+            background: linear-gradient(90deg, #ffa502, #ff6348);
+        }
+
+        .threat-bar.threat-critical {
+            background: linear-gradient(90deg, #ff4757, #ff6b81);
+        }
+
+        .issues-container {
+            margin-top: 20px;
+        }
+
+        .issues-container h4 {
+            color: #00ff88;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .issue-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid #00ff88;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .issue-item.issue-critical {
+            border-left-color: #ff4757;
+        }
+
+        .issue-item.issue-high {
+            border-left-color: #ff6348;
+        }
+
+        .issue-item.issue-medium {
+            border-left-color: #ffa502;
+        }
+
+        .issue-item.issue-low {
+            border-left-color: #70a1ff;
+        }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .issue-type {
+            font-weight: bold;
+            font-size: 14px;
+            color: #fff;
+        }
+
+        .issue-risk {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .risk-critical {
+            background: #ff4757;
+            color: #fff;
+        }
+
+        .risk-high {
+            background: #ff6348;
+            color: #fff;
+        }
+
+        .risk-medium {
+            background: #ffa502;
+            color: #fff;
+        }
+
+        .risk-low {
+            background: #70a1ff;
+            color: #fff;
+        }
+
+        .issue-recommendation {
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 3px;
+            color: #00ff88;
+            font-size: 13px;
+        }
+
+        .no-issues {
+            text-align: center;
+            padding: 20px;
+            color: #2ed573;
+            font-size: 16px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -15,8 +149,8 @@
         </div>
         
         <div class="info-guide">
-            <h3>RFID Card Identifier</h3>
-            <p>This tool identifies HF RFID cards and displays their UID, type, and other information. Place your card on the PN532 reader to begin scanning.</p>
+            <h3>RFID Card Identifier & Security Analyzer</h3>
+            <p>This tool identifies HF RFID cards, displays their information, and performs security analysis to detect vulnerabilities.</p>
             <p><strong>Note:</strong> Supports ISO14443A compatible cards including Mifare Classic, Mifare Ultralight, and NTAG series.</p>
         </div>
         
@@ -60,6 +194,26 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Security Analysis Section -->
+                <div id="security-analysis" class="result-card" style="display: none; margin-top: 20px;">
+                    <div class="result-title">
+                        <h3>Security Analysis</h3>
+                    </div>
+                    <div class="profile-info">
+                        <div class="threat-score-display">
+                            <div id="threat-score" class="threat-score">0</div>
+                            <div id="threat-status" class="threat-status">SAFE</div>
+                        </div>
+                        <div class="threat-bar-container">
+                            <div id="threat-bar" class="threat-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div id="issues-container" class="issues-container">
+                        <h4>Security Issues Detected</h4>
+                        <div id="issues-list"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -73,9 +227,15 @@
         const cardUid = document.getElementById('card-uid');
         const cardUidLength = document.getElementById('card-uid-length');
         const cardType = document.getElementById('card-type');
+        const securityAnalysis = document.getElementById('security-analysis');
+        const threatScore = document.getElementById('threat-score');
+        const threatStatus = document.getElementById('threat-status');
+        const threatBar = document.getElementById('threat-bar');
+        const issuesList = document.getElementById('issues-list');
 
         let isSetup = false;
         let isIdentifying = false;
+        let currentCardInfo = null;
 
         // Setup PN532
         setupBtn.addEventListener('click', async () => {
@@ -127,6 +287,7 @@
                 identifyStatus.innerHTML = '<p>Identification stopped.</p>';
                 identifyStatus.className = 'wifi-status';
                 cardInfo.style.display = 'none';
+                securityAnalysis.style.display = 'none';
                 document.getElementById('identify-section').classList.remove('active');
                 return;
             }
@@ -138,6 +299,7 @@
             identifyStatus.innerHTML = '<p>Waiting for card... Please place your card on the reader.</p>';
             identifyStatus.className = 'wifi-status info';
             cardInfo.style.display = 'none';
+            securityAnalysis.style.display = 'none';
             document.getElementById('identify-section').classList.add('active');
             
             while (isIdentifying) {
@@ -155,11 +317,17 @@
                         identifyStatus.innerHTML = '<p>✅ Card found!</p>';
                         identifyStatus.className = 'wifi-status success';
                         
+                        // Store card info
+                        currentCardInfo = result;
+                        
                         // Display card information
                         cardUid.textContent = result.uid;
                         cardUidLength.textContent = result.uid_length;
                         cardType.textContent = result.type.join(', ');
                         cardInfo.style.display = 'block';
+                        
+                        // Perform security analysis
+                        await performSecurityAnalysis(result);
                         
                         // Stop identifying after finding a card
                         isIdentifying = false;
@@ -184,6 +352,109 @@
                 }
             }
         });
+
+        // Perform Security Analysis
+        async function performSecurityAnalysis(cardResult) {
+            try {
+                // Prepare card info for analysis
+                const card_info = {
+                    uid: cardResult.uid,
+                    uid_length: cardResult.uid_length,
+                    type: cardResult.type,
+                    // Determine security attributes based on card type and UID
+                    uid_only: isUidOnlyCard(cardResult.type),
+                    auth_enabled: hasAuthentication(cardResult.type),
+                    static_uid: cardResult.uid_length === 4 // 4-byte UIDs are typically static
+                };
+
+                const response = await fetch('/RFID/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ card_info })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displaySecurityAnalysis(result);
+                } else {
+                    console.error('Security analysis failed:', result.error);
+                }
+            } catch (error) {
+                console.error('Error performing security analysis:', error);
+            }
+        }
+
+        // Display Security Analysis
+        function displaySecurityAnalysis(result) {
+            const score = result.threat.score;
+            const status = result.threat.status;
+            const issues = result.issues || [];
+
+            // Update threat score
+            threatScore.textContent = score;
+            threatStatus.textContent = status;
+            
+            // Update threat bar
+            threatBar.style.width = score + '%';
+            
+            // Set color based on status
+            threatBar.className = 'threat-bar';
+            if (status === 'CRITICAL') {
+                threatBar.classList.add('threat-critical');
+                threatStatus.style.color = '#ff4757';
+            } else if (status === 'WARNING') {
+                threatBar.classList.add('threat-warning');
+                threatStatus.style.color = '#ffa502';
+            } else {
+                threatBar.classList.add('threat-safe');
+                threatStatus.style.color = '#2ed573';
+            }
+
+            // Display issues
+            if (issues.length === 0) {
+                issuesList.innerHTML = '<div class="no-issues">✅ No security issues detected</div>';
+            } else {
+                issuesList.innerHTML = '';
+                issues.forEach((issue) => {
+                    const issueElement = document.createElement('div');
+                    issueElement.className = 'issue-item issue-' + issue.risk.toLowerCase();
+                    
+                    let issueContent = `
+                        <div class="issue-header">
+                            <span class="issue-type">${formatIssueType(issue.type)}</span>
+                            <span class="issue-risk risk-${issue.risk.toLowerCase()}">${issue.risk}</span>
+                        </div>
+                        <div class="issue-recommendation">💡 ${issue.recommendation}</div>
+                    `;
+
+                    issueElement.innerHTML = issueContent;
+                    issuesList.appendChild(issueElement);
+                });
+            }
+
+            // Show security analysis section
+            securityAnalysis.style.display = 'block';
+        }
+
+        // Helper: Check if card is UID-only
+        function isUidOnlyCard(types) {
+            const uidOnlyTypes = ['MIFARE Ultralight', 'NTAG', 'UID'];
+            return types.some(type => uidOnlyTypes.some(uType => type.includes(uType)));
+        }
+
+        // Helper: Check if card has authentication
+        function hasAuthentication(types) {
+            const authTypes = ['MIFARE Classic', 'MIFARE Plus', 'DESFire'];
+            return types.some(type => authTypes.some(aType => type.includes(aType)));
+        }
+
+        // Format issue type for display
+        function formatIssueType(type) {
+            return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+        }
     </script>
 </body>
 </html>
