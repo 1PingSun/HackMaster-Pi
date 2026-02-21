@@ -4,12 +4,13 @@ After=local-fs.target dev-i2c-1.device
 DefaultDependencies=no
 
 [Service]
-Type=forking
-ExecStart=/usr/local/bin/ssd1306_boot_logo &
+Type=idle
+ExecStart=/usr/local/bin/ssd1306_boot_logo
 Restart=no
 RemainAfterExit=yes
 StandardOutput=journal
 StandardError=journal
+TimeoutStartSec=10
 
 [Install]
 WantedBy=local-fs.target
