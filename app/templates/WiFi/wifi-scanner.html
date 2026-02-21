@@ -225,6 +225,13 @@
                 <div id="issues-container" class="issues-container">
                     <h3>Security Issues Detected</h3>
                     <div id="issues-list"></div>
+                    
+                    <!-- Export Button -->
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button id="export-csv-btn" class="action-button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <span>📊 Export to CSV</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -246,10 +253,12 @@
             const threatStatus = document.getElementById('threat-status');
             const threatBar = document.getElementById('threat-bar');
             const issuesList = document.getElementById('issues-list');
+            const exportCsvBtn = document.getElementById('export-csv-btn');
             
             // State variables
             let isScanning = false;
             let selectedInterface = '';
+            let currentIssues = []; // 儲存當前掃描結果
 
             // List Network Interfaces
             listInterfacesBtn.addEventListener('click', async function() {
@@ -354,6 +363,9 @@
                 const score = result.threat.score;
                 const status = result.threat.status;
                 const issues = result.issues || [];
+                
+                // 儲存當前掃描結果供 CSV 導出使用
+                currentIssues = issues;
 
                 // Update threat score
                 threatScore.textContent = score;
@@ -448,6 +460,102 @@
             // Format issue type for display
             function formatIssueType(type) {
                 return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+            }
+
+            // Export to CSV (純前端實現)
+            exportCsvBtn.addEventListener('click', function() {
+                if (!currentIssues || currentIssues.length === 0) {
+                    alert('No data to export. Please run a scan first.');
+                    return;
+                }
+
+                // 準備 CSV 標題
+                const headers = [
+                    'Issue Type',
+                    'Risk Level',
+                    'SSID',
+                    'BSSID',
+                    'Signal (dBm)',
+                    'Signal Quality',
+                    'Channel',
+                    'Band',
+                    'Frequency',
+                    'Encryption',
+                    'Recommendation'
+                ];
+
+                // 準備 CSV 數據行
+                const rows = currentIssues.map(issue => {
+                    // 處理 Evil Twin 的特殊情況
+                    if (issue.type === 'EVIL_TWIN' && issue.ap_details) {
+                        // 為每個 AP 創建一行
+                        return issue.ap_details.map(ap => [
+                            formatIssueType(issue.type),
+                            issue.risk,
+                            issue.ssid || '',
+                            ap.bssid || '',
+                            ap.signal || 'N/A',
+                            'N/A',
+                            ap.channel || 'N/A',
+                            'N/A',
+                            'N/A',
+                            ap.encryption || 'N/A',
+                            issue.recommendation
+                        ]).join('\n');
+                    } else {
+                        // 一般情況
+                        return [
+                            formatIssueType(issue.type),
+                            issue.risk,
+                            issue.ssid || '',
+                            issue.bssid || '',
+                            issue.signal || 'N/A',
+                            issue.signal_quality || 'N/A',
+                            issue.channel || 'N/A',
+                            issue.band || 'N/A',
+                            issue.frequency || 'N/A',
+                            issue.encryption || 'N/A',
+                            issue.recommendation
+                        ].map(escapeCSV).join(',');
+                    }
+                });
+
+                // 組合 CSV 內容
+                const csvContent = [
+                    headers.map(escapeCSV).join(','),
+                    ...rows
+                ].join('\n');
+
+                // 創建 Blob 並觸發下載
+                const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                
+                // 生成檔名（包含時間戳）
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                const filename = `wifi_defense_scan_${timestamp}.csv`;
+                
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // 釋放 URL 對象
+                URL.revokeObjectURL(url);
+            });
+
+            // CSV 轉義函數（處理逗號、引號、換行等特殊字符）
+            function escapeCSV(str) {
+                if (str === null || str === undefined) return '';
+                str = String(str);
+                // 如果包含逗號、引號或換行，用引號包裹並轉義內部引號
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return '"' + str.replace(/"/g, '""') + '"';
+                }
+                return str;
             }
         });
     </script>
