@@ -1,16 +1,14 @@
 [Unit]
 Description=SSD1306 OLED Boot Logo (Cat)
-After=local-fs.target dev-i2c-1.device
 DefaultDependencies=no
+After=local-fs.target
 
 [Service]
-Type=idle
+Type=simple
 ExecStart=/usr/local/bin/ssd1306_boot_logo
-Restart=no
 RemainAfterExit=yes
 StandardOutput=journal
 StandardError=journal
-TimeoutStartSec=10
 
 [Install]
-WantedBy=local-fs.target
+WantedBy=sysinit.target
