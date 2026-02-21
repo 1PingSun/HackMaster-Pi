@@ -1,8 +1,7 @@
 [Unit]
 Description=SSD1306 OLED Boot Logo (Cat)
 DefaultDependencies=no
-Before=sysinit.target shutdown.target
-Conflicts=shutdown.target
+After=local-fs.target
 
 [Service]
 Type=simple
@@ -12,4 +11,4 @@ StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=sysinit.target
+WantedBy=local-fs.target
