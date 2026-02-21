@@ -67,6 +67,7 @@ Description=HackMaster Pi Application
 After=network.target
 
 [Service]
+ExecStartPre=/bin/systemctl stop ssd1306-boot-logo.service
 ExecStart=/bin/bash -c 'cd ${APP_DIR} && sudo ${ENV_DIR}/bin/python3 main.py'
 WorkingDirectory=${APP_DIR}
 Restart=always

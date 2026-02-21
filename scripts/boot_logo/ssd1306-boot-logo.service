@@ -1,0 +1,16 @@
+[Unit]
+Description=SSD1306 OLED Boot Logo (Cat)
+After=local-fs.target
+DefaultDependencies=no
+Before=sysinit.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ssd1306_boot_logo
+Restart=no
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=sysinit.target

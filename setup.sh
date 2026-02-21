@@ -15,6 +15,14 @@ cd ./scripts
 sudo chmod +x setup_ip_show.sh
 sudo ./setup_ip_show.sh
 cd ..
+
+# ==== for boot logo ====
+# I2C 和 OLED 驅動都設定好了，現在安裝開機 logo
+cd ./scripts/boot_logo
+sudo chmod +x install_boot_logo.sh
+sudo ./install_boot_logo.sh
+cd ../..
+
 sudo ./setup_hackmasterpi.sh
 
 # ==== for PN532 ====
