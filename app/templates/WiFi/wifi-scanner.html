@@ -395,8 +395,43 @@
                             issueContent += `<div class="issue-detail"><strong>SSID:</strong> ${issue.ssid}</div>`;
                         }
 
+                        if (issue.bssid) {
+                            issueContent += `<div class="issue-detail"><strong>BSSID:</strong> ${issue.bssid}</div>`;
+                        }
+
+                        // 顯示訊號資訊
+                        if (issue.signal && issue.signal !== 'N/A') {
+                            const signalQuality = issue.signal_quality || 'N/A';
+                            issueContent += `<div class="issue-detail"><strong>Signal:</strong> ${issue.signal} dBm (${signalQuality})</div>`;
+                        }
+
+                        // 顯示頻道和頻段資訊
+                        if (issue.channel && issue.channel !== 'N/A') {
+                            const band = issue.band || 'N/A';
+                            const freq = issue.frequency || '';
+                            issueContent += `<div class="issue-detail"><strong>Channel:</strong> ${issue.channel} (${band}${freq ? ', ' + freq : ''})</div>`;
+                        }
+
+                        // 顯示加密資訊
+                        if (issue.encryption) {
+                            issueContent += `<div class="issue-detail"><strong>Encryption:</strong> ${issue.encryption}</div>`;
+                        }
+
+                        // Evil Twin 的特殊顯示
                         if (issue.bssids && issue.bssids.length > 0) {
-                            issueContent += `<div class="issue-detail"><strong>BSSIDs:</strong> ${issue.bssids.join(', ')}</div>`;
+                            issueContent += `<div class="issue-detail"><strong>Detected ${issue.count} APs:</strong></div>`;
+                            if (issue.ap_details) {
+                                issue.ap_details.forEach((ap, idx) => {
+                                    issueContent += `
+                                        <div class="issue-detail" style="margin-left: 20px; font-size: 0.9em;">
+                                            ${idx + 1}. ${ap.bssid}<br>
+                                            &nbsp;&nbsp;&nbsp;Signal: ${ap.signal} dBm | Ch: ${ap.channel} | ${ap.encryption}
+                                        </div>
+                                    `;
+                                });
+                            } else {
+                                issueContent += `<div class="issue-detail"><strong>BSSIDs:</strong> ${issue.bssids.join(', ')}</div>`;
+                            }
                         }
 
                         issueContent += `<div class="issue-recommendation">💡 ${issue.recommendation}</div>`;
