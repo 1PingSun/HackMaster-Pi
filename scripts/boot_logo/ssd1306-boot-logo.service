@@ -11,4 +11,4 @@ StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=sysinit.target
+WantedBy=local-fs.target
