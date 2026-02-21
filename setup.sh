@@ -11,10 +11,10 @@ sudo ./scripts/enable_i2c.sh
 sudo apt-get install -y python3-pip python3-dev python3-smbus i2c-tools
 sudo pip3 install --break-system-packages netifaces
 sudo pip3 install --break-system-packages luma.oled
-cd ./scripts
+cd ./scripts/ip_show
 sudo chmod +x setup_ip_show.sh
 sudo ./setup_ip_show.sh
-cd ..
+cd ../..
 
 # ==== for boot logo ====
 # I2C 和 OLED 驅動都設定好了，現在安裝開機 logo
