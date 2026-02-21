@@ -39,6 +39,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
+ExecStartPre=/bin/systemctl stop ssd1306-boot-logo.service
 ExecStart=/usr/bin/python3 /usr/local/bin/oled_ip_display.py
 Restart=always
 User=root

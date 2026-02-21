@@ -182,7 +182,9 @@ def main():
     # 保存到全局變量，以便在關機時使用
     global_device = device
 
+    # 清空螢幕 - 確保之前的內容（boot logo）被清除
     device.clear()
+    time.sleep(0.1)  # 短暫延遲確保清空完成
 
     # 調低亮度 (設定為30%)
     device.contrast(80)  # 0-255，默認值通常為255
