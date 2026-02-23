@@ -2,8 +2,6 @@ import asyncio
 import binascii
 from typing import Any, Dict
 
-from fastapi.responses import JSONResponse
-
 from services.rfid_service import RFIDService
 from api.mylib.RFIDlib import main as RFIDlib
 from api.mylib.defense.defense_manager import DefenseManager
