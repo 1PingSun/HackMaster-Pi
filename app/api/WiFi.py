@@ -1,22 +1,11 @@
-from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi import APIRouter, Request, BackgroundTasks, Depends
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import Optional, List, Dict
-import os
-import subprocess
-import time
-import uuid
-import json
-from .mylib.WeakPasswordGenerater.main import PasswordGenerator
-from .mylib.ap_scan import scan_wifi_networks
-from .mylib.defense.defense_manager import DefenseManager
-import random
-import asyncio
-import csv
-import glob
-import re
-from datetime import datetime
+
+from services.wifi_service import WiFiService
+from services.real.wifi_real import WiFiRealService
 
 router = APIRouter(
     prefix="/WiFi",
@@ -25,19 +14,9 @@ router = APIRouter(
 
 templates = Jinja2Templates(directory="templates")
 
-# AP 狀態變數
-ap_running = False
-ap_start_time = None
-ap_config = None
-capture_active = False
-capture_process = None
-capture_file = None
-connected_clients = []
 
-# 全域網卡名稱列表
-network_adapters = []
+# ---------- Pydantic models ----------
 
-# 定義 AP 配置模型
 class APConfig(BaseModel):
     ssid: str
     security: str
@@ -48,7 +27,6 @@ class APConfig(BaseModel):
     internet_sharing: bool = False
     mac_address: Optional[str] = None
 
-# 定義捕獲文件模型
 class CaptureFile(BaseModel):
     id: str
     filename: str
@@ -56,38 +34,29 @@ class CaptureFile(BaseModel):
     size: int
     timestamp: str
 
-# 儲存的捕獲文件
-capture_files = []
-
-# 定義請求模型
 class ScanRequest(BaseModel):
     bands: Dict[str, bool]
     show_hidden: bool = False
 
-# 定義網路介面請求模型
 class NetworkInterfaceRequest(BaseModel):
     interface: str
 
-# 定義掃描請求模型
 class ScanWifiRequest(BaseModel):
     interface: str
     timeout: int = 10
 
-# 定義監聽握手包請求模型
 class CaptureRequest(BaseModel):
     interface: str
     bssid: str
     channel: int
     output_file: Optional[str] = None
 
-# 定義斷線訊號請求模型
 class DeauthRequest(BaseModel):
     interface: str
     bssid: str
-    packets: int = 10  # 預設 10 個封包
+    packets: int = 10
     broadcast: bool = True
 
-# 定義破解請求模型
 class CrackRequest(BaseModel):
     capture_file: str
     wordlist: str
@@ -95,24 +64,29 @@ class CrackRequest(BaseModel):
     attack_mode: Optional[str] = "0"
     ssid: Optional[str] = None
 
-# 定義請求模型
 class WordlistRequest(BaseModel):
     output_filename: str
     info_data: Dict[str, List[str]]
 
-# 定義頻道設定請求模型
 class ChannelRequest(BaseModel):
     interface: str
     channel: str
 
-# 定義檢查握手包請求模型
 class HandshakeCheckRequest(BaseModel):
-    capture_file: Optional[str] = "deauth_handshake-01.cap"  # airodump-ng 會自動加上 -01
+    capture_file: Optional[str] = "deauth_handshake-01.cap"
 
-# 定義密碼破解請求模型
 class CrackPasswordRequest(BaseModel):
     capture_file: Optional[str] = "deauth_handshake-01.cap"
     wordlist_file: str
+
+
+# ---------- Dependency ----------
+
+def get_wifi_service() -> WiFiService:
+    return WiFiRealService()
+
+
+# ---------- HTML page routes ----------
 
 @router.get("/ap-emulator", response_class=HTMLResponse)
 def read_ap_emulator(request: Request):
@@ -142,898 +116,65 @@ def read_wordlist_generator(request: Request):
         {"request": request, "message": "Wordlist Generator"}
     )
 
-@router.get("/interface/details")
-async def list_adapters(request: Request):
-    """
-    執行 ifconfig -a 命令並返回所有網路介面的詳細資訊
-    """
-    global network_adapters
-    
-    try:
-        # 執行 ifconfig -a 命令
-        result = subprocess.run(
-            ["ifconfig", "-a"],
-            capture_output=True, text=True, timeout=10
-        )
-        
-        if result.returncode == 0:
-            # 截取網卡名稱
-            network_adapters = extract_adapter_names(result.stdout)
-            
-            return {
-                "success": True,
-                "output": result.stdout,
-                "message": "Network adapters listed successfully",
-                "adapters": network_adapters
-            }
-        else:
-            return {
-                "success": False,
-                "message": f"Failed to execute ifconfig: {result.stderr}",
-                "output": result.stderr,
-                "adapters": []
-            }
-            
-    except subprocess.TimeoutExpired:
-        return {
-            "success": False,
-            "message": "Command timed out",
-            "output": "",
-            "adapters": []
-        }
-    except FileNotFoundError:
-        return {
-            "success": False,
-            "message": "ifconfig command not found. Please ensure net-tools is installed.",
-            "output": "",
-            "adapters": []
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error executing ifconfig: {str(e)}",
-            "output": "",
-            "adapters": []
-        }
 
-def extract_adapter_names(ifconfig_output):
-    """
-    從 ifconfig 輸出中截取網卡名稱
-    """
-    adapter_names = []
-    lines = ifconfig_output.split('\n')
-    
-    for line in lines:
-        # 網卡名稱通常在行的開頭，後面跟著冒號或空格
-        # 例如: "eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500"
-        # 或: "wlan0     Link encap:Ethernet  HWaddr"
-        if line and not line.startswith(' ') and not line.startswith('\t'):
-            # 提取網卡名稱 (在冒號或空格之前)
-            if ':' in line:
-                adapter_name = line.split(':')[0].strip()
-            else:
-                # 處理某些系統中沒有冒號的情況
-                parts = line.split()
-                if parts:
-                    adapter_name = parts[0].strip()
-                else:
-                    continue
-            
-            # 過濾掉空字串和無效名稱
-            if adapter_name and adapter_name.isalnum() or any(c in adapter_name for c in ['-', '_']):
-                adapter_names.append(adapter_name)
-    
-    return adapter_names
+# ---------- API routes ----------
+
+@router.get("/interface/details")
+async def list_adapters(service: WiFiService = Depends(get_wifi_service)):
+    return await service.get_interface_details()
 
 @router.get("/interface/list")
-async def get_adapter_names():
-    """
-    返回已截取的網卡名稱列表
-    """
-    global network_adapters
-    
-    return {
-        "success": True,
-        "adapters": network_adapters,
-        "count": len(network_adapters)
-    }
+async def get_adapter_names(service: WiFiService = Depends(get_wifi_service)):
+    return await service.get_interface_list()
 
 @router.post("/interface/monitorMode")
-async def activate_monitor_mode(request: NetworkInterfaceRequest):
-    """
-    啟用指定網路介面的監聽模式
-    """
-    try:
-        # 執行 sudo ifconfig {interface_name} up
-        up_result = subprocess.run(
-            ["sudo", "ifconfig", request.interface, "up"],
-            capture_output=True, text=True, timeout=10
-        )
-        
-        if up_result.returncode != 0:
-            return {
-                "success": False,
-                "message": f"Failed to bring up interface {request.interface}",
-                "error": up_result.stderr
-            }
-        
-        # 執行 sudo iwconfig {interface_name} mode monitor
-        monitor_result = subprocess.run(
-            ["sudo", "iwconfig", request.interface, "mode", "monitor"],
-            capture_output=True, text=True, timeout=10
-        )
-        
-        if monitor_result.returncode != 0:
-            return {
-                "success": False,
-                "message": f"Failed to set monitor mode for {request.interface}",
-                "error": monitor_result.stderr
-            }
-        
-        return {
-            "success": True,
-            "message": f"Monitor mode activated successfully for {request.interface}",
-            "interface": request.interface
-        }
-        
-    except subprocess.TimeoutExpired:
-        return {
-            "success": False,
-            "message": "Command timed out",
-            "interface": request.interface
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error activating monitor mode: {str(e)}",
-            "interface": request.interface
-        }
+async def activate_monitor_mode(request: NetworkInterfaceRequest, service: WiFiService = Depends(get_wifi_service)):
+    return await service.set_monitor_mode(request.interface)
 
 @router.get("/interface/status")
-async def get_interface_status(interface: str):
-    """
-    取得指定網路介面的狀態，特別是其模式
-    """
-    try:
-        # 執行 iwconfig 命令
-        result = subprocess.run(
-            ["iwconfig", interface],
-            capture_output=True, text=True, timeout=10
-        )
-        
-        if result.returncode != 0:
-            return {
-                "success": False,
-                "message": f"Failed to get status for interface {interface}",
-                "error": result.stderr,
-                "interface": interface
-            }
-        
-        output = result.stdout
-        mode = "Unknown"
-        
-        # 從 iwconfig 輸出中擷取模式
-        if "Mode:Monitor" in output:
-            mode = "Monitor"
-        elif "Mode:Managed" in output:
-            mode = "Managed"
-        elif "Mode:Master" in output:
-            mode = "Master"
-        elif "Mode:Ad-Hoc" in output:
-            mode = "Ad-Hoc"
-        elif "no wireless extensions" in output.lower():
-            return {
-                "success": False,
-                "message": f"Interface {interface} is not a wireless interface",
-                "interface": interface
-            }
-        
-        return {
-            "success": True,
-            "interface": interface,
-            "mode": mode,
-            "status": f"{mode} mode",
-            "output": output
-        }
-        
-    except subprocess.TimeoutExpired:
-        return {
-            "success": False,
-            "message": "Command timed out",
-            "interface": interface
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error getting interface status: {str(e)}",
-            "interface": interface
-        }
+async def get_interface_status(interface: str, service: WiFiService = Depends(get_wifi_service)):
+    return await service.get_interface_status(interface)
 
 @router.post("/ap/scan")
-async def scan_wifi(request: ScanWifiRequest):
-    try:
-        # 使用 asyncio 在執行緒池中運行掃描，避免阻塞事件循環
-        loop = asyncio.get_event_loop()
-        nearby_ap = await loop.run_in_executor(
-            None, 
-            scan_wifi_networks, 
-            request.interface, 
-            request.timeout
-        )
-        
-        return {
-            "success": True,
-            "ap_list": nearby_ap,
-            "interface": request.interface,
-            "count": len(nearby_ap)
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Failed to scan networks: {str(e)}",
-            "ap_list": [],
-            "interface": request.interface,
-            "count": 0
-        }
-    
-@router.post('/interface/channel')
-async def set_interface_channel(request: ChannelRequest):
-    """
-    設定指定網路介面的頻道
-    """
-    try:
-        # 執行 sudo iwconfig {interface_name} channel {channel}
-        result = subprocess.run(
-            ["sudo", "iwconfig", request.interface, "channel", request.channel],
-            capture_output=True, text=True, timeout=10
-        )
-        
-        if result.returncode != 0:
-            return {
-                "success": False,
-                "message": f"Failed to set channel {request.channel} for {request.interface}",
-                "error": result.stderr
-            }
-        
-        return {
-            "success": True,
-            "message": f"Channel {request.channel} set successfully for {request.interface}",
-            "interface": request.interface,
-            "channel": request.channel
-        }
-        
-    except subprocess.TimeoutExpired:
-        return {
-            "success": False,
-            "message": "Command timed out",
-            "interface": request.interface,
-            "channel": request.channel
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error setting channel: {str(e)}",
-            "interface": request.interface,
-            "channel": request.channel
-        }
+async def scan_wifi(request: ScanWifiRequest, service: WiFiService = Depends(get_wifi_service)):
+    return await service.scan_networks(request.interface, request.timeout)
+
+@router.post("/interface/channel")
+async def set_interface_channel(request: ChannelRequest, service: WiFiService = Depends(get_wifi_service)):
+    return await service.set_channel(request.interface, request.channel)
 
 @router.post("/capture/start")
-async def start_capture(request: CaptureRequest, background_tasks: BackgroundTasks):
-    """
-    開始捕獲 Wi-Fi 流量
-    """
-    global capture_active, capture_process
-    
-    if capture_active:
-        return {
-            "success": False,
-            "message": "Capture is already running"
-        }
-    
-    try:
-        # 使用固定的輸出文件名
-        output_file = "deauth_handshake"
-            
-        # 確保捕獲目錄存在
-        os.makedirs("data/captures", exist_ok=True)
-        output_path = os.path.join("data/captures", output_file)
-        
-        # 刪除舊的捕獲文件（airodump-ng 會自動加上 -01、-02 等後綴）
-        import glob
-        old_file_patterns = [
-            f"{output_path}*.cap",
-            f"{output_path}*.csv",
-            f"{output_path}*.kismet*",
-            f"{output_path}*.log.csv"
-        ]
-        
-        for pattern in old_file_patterns:
-            for old_file in glob.glob(pattern):
-                try:
-                    if os.path.exists(old_file):
-                        os.remove(old_file)
-                        print(f"Removed old capture file: {old_file}")
-                except Exception as e:
-                    print(f"Failed to remove old file {old_file}: {e}")
-        
-        # 使用 airodump-ng 開始捕獲流量
-        # 指令範例：sudo airodump-ng -c 7 --bssid BO:BE:76:CD:97:24 -w capture wlan1
-        capture_command = [
-            "sudo", "airodump-ng",
-            "-c", str(request.channel),
-            "--bssid", request.bssid,
-            "-w", output_path,
-            request.interface
-        ]
-        
-        # 在背景啟動捕獲進程
-        background_tasks.add_task(run_capture_process, capture_command, output_path)
-        
-        return {
-            "success": True,
-            "message": "Traffic capture started",
-            "capture_file": "deauth_handshake-01.cap",  # airodump-ng 會自動產生 -01 後綴
-            "command": " ".join(capture_command)
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Failed to start capture: {str(e)}"
-        }
-
-@router.post("/deauth/send")
-async def send_deauth(request: DeauthRequest):
-    """
-    發送解除認證封包
-    """
-    try:
-        # 構建 aireplay-ng 指令
-        # sudo aireplay-ng --deauth {packets} -a {bssid} {interface}
-        deauth_command = [
-            "sudo", "aireplay-ng",
-            "--deauth", str(request.packets),
-            "-a", request.bssid,
-            request.interface
-        ]
-        
-        # 如果不是廣播模式，可以加入特定客戶端MAC
-        # 這裡暫時只支援廣播模式（對所有連接的客戶端發送）
-        
-        # 執行指令
-        result = subprocess.run(
-            deauth_command,
-            capture_output=True, 
-            text=True, 
-            timeout=30  # 30秒超時
-        )
-        
-        if result.returncode == 0:
-            return {
-                "success": True,
-                "message": f"Successfully sent {request.packets} deauth packets to {request.bssid}",
-                "packets_sent": request.packets,
-                "target_bssid": request.bssid,
-                "interface": request.interface,
-                "command": " ".join(deauth_command),
-                "output": result.stdout
-            }
-        else:
-            return {
-                "success": False,
-                "message": f"Failed to send deauth packets: {result.stderr}",
-                "command": " ".join(deauth_command),
-                "error": result.stderr
-            }
-            
-    except subprocess.TimeoutExpired:
-        return {
-            "success": False,
-            "message": "Deauth command timed out (30 seconds)",
-            "packets_sent": 0
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error sending deauth packets: {str(e)}",
-            "packets_sent": 0
-        }
-
-
-@router.post("/handshake/check")
-async def check_handshake(request: HandshakeCheckRequest):
-    """
-    檢查捕獲文件中的握手包數量
-    """
-    try:
-        # 如果指定的檔案不存在，嘗試自動偵測最新的 capture 檔案
-        capture_path = os.path.join("data/captures", request.capture_file)
-        
-        if not os.path.exists(capture_path):
-            # 嘗試尋找最新的 capture 檔案
-            import glob
-            capture_dir = "data/captures"
-            if os.path.exists(capture_dir):
-                capture_files = glob.glob(os.path.join(capture_dir, "deauth_handshake*.cap"))
-                if capture_files:
-                    # 按修改時間排序，取最新的
-                    capture_path = max(capture_files, key=os.path.getmtime)
-                    request.capture_file = os.path.basename(capture_path)
-                else:
-                    return {
-                        "success": False,
-                        "message": f"No deauth_handshake files found in {capture_dir}",
-                        "handshakes": 0,
-                        "networks": []
-                    }
-            else:
-                return {
-                    "success": False,
-                    "message": f"Capture directory not found: {capture_dir}",
-                    "handshakes": 0,
-                    "networks": []
-                }
-        
-        # 再次確認文件是否存在
-        if not os.path.exists(capture_path):
-            return {
-                "success": False,
-                "message": f"Capture file not found: {request.capture_file}",
-                "handshakes": 0,
-                "networks": []
-            }
-        
-        # 構建 aircrack-ng 指令來檢查握手包
-        # sudo aircrack-ng capture-01.cap
-        aircrack_command = [
-            "sudo", "aircrack-ng",
-            capture_path
-        ]
-        
-        # 執行指令
-        result = subprocess.run(
-            aircrack_command,
-            capture_output=True, 
-            text=True, 
-            timeout=30  # 30秒超時
-        )
-        
-        # 解析 aircrack-ng 的輸出
-        networks = parse_aircrack_output(result.stdout)
-        
-        # 計算總握手包數量
-        total_handshakes = sum(network.get('handshakes', 0) for network in networks)
-        
-        return {
-            "success": True,
-            "message": f"Found {total_handshakes} handshake(s) in {len(networks)} network(s)",
-            "capture_file": request.capture_file,
-            "total_handshakes": total_handshakes,
-            "total_networks": len(networks),
-            "networks": networks,
-            "command": " ".join(aircrack_command),
-            "raw_output": result.stdout
-        }
-            
-    except subprocess.TimeoutExpired:
-        return {
-            "success": False,
-            "message": "Aircrack-ng command timed out (30 seconds)",
-            "handshakes": 0,
-            "networks": []
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error checking handshakes: {str(e)}",
-            "handshakes": 0,
-            "networks": []
-        }
-
-
-def parse_aircrack_output(output: str) -> List[Dict]:
-    """
-    解析 aircrack-ng 的輸出來提取網路資訊和握手包數量
-    """
-    networks = []
-    
-    try:
-        lines = output.split('\n')
-        in_network_list = False
-        
-        for line in lines:
-            line = line.strip()
-            
-            # 找到網路列表的開始
-            if "#  BSSID" in line and "ESSID" in line and "Encryption" in line:
-                in_network_list = True
-                continue
-            
-            # 如果遇到空行或其他內容，停止解析網路列表
-            if in_network_list and not line:
-                break
-                
-            # 解析網路資訊
-            if in_network_list and line and line[0].isdigit():
-                # 範例行: "   1  B0:BE:76:CD:97:24  victim                    WPA (0 handshake)"
-                parts = line.split()
-                if len(parts) >= 4:
-                    try:
-                        network_num = parts[0]
-                        bssid = parts[1]
-                        
-                        # ESSID 可能包含空格，需要特殊處理
-                        # 找到 WPA/WEP 等加密類型的位置
-                        encryption_start = -1
-                        for i, part in enumerate(parts[2:], 2):
-                            if any(enc in part.upper() for enc in ['WPA', 'WEP', 'OPN']):
-                                encryption_start = i
-                                break
-                        
-                        if encryption_start > 2:
-                            essid = ' '.join(parts[2:encryption_start])
-                            encryption_info = ' '.join(parts[encryption_start:])
-                        else:
-                            essid = parts[2] if len(parts) > 2 else "Unknown"
-                            encryption_info = ' '.join(parts[3:]) if len(parts) > 3 else "Unknown"
-                        
-                        # 提取握手包數量
-                        handshakes = 0
-                        if "handshake" in encryption_info.lower():
-                            # 尋找數字
-                            import re
-                            handshake_match = re.search(r'\((\d+) handshake', encryption_info)
-                            if handshake_match:
-                                handshakes = int(handshake_match.group(1))
-                        
-                        network = {
-                            "number": int(network_num),
-                            "bssid": bssid,
-                            "essid": essid,
-                            "encryption": encryption_info,
-                            "handshakes": handshakes
-                        }
-                        networks.append(network)
-                        
-                    except (ValueError, IndexError) as e:
-                        print(f"Error parsing network line '{line}': {e}")
-                        continue
-    
-    except Exception as e:
-        print(f"Error parsing aircrack output: {e}")
-    
-    return networks
-
+async def start_capture(request: CaptureRequest, background_tasks: BackgroundTasks, service: WiFiService = Depends(get_wifi_service)):
+    return await service.start_capture(request, background_tasks)
 
 @router.post("/capture/stop")
-async def stop_capture():
-    """
-    停止捕獲 Wi-Fi 流量
-    """
-    global capture_active, capture_process
-    
-    try:
-        if not capture_active or not capture_process:
-            return {
-                "success": False,
-                "message": "No capture is currently running"
-            }
-        
-        # 終止捕獲進程 (asyncio 子進程)
-        capture_process.terminate()
-        
-        # 等待進程結束
-        try:
-            await asyncio.wait_for(capture_process.wait(), timeout=5.0)
-        except asyncio.TimeoutError:
-            capture_process.kill()
-            await capture_process.wait()
-        
-        capture_active = False
-        capture_process = None
-        
-        return {
-            "success": True,
-            "message": "Traffic capture stopped"
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Failed to stop capture: {str(e)}"
-        }
+async def stop_capture(service: WiFiService = Depends(get_wifi_service)):
+    return await service.stop_capture()
 
-# 背景捕獲進程
-async def run_capture_process(command, output_path):
-    global capture_process, capture_active
-    
-    try:
-        capture_active = True
-        
-        # 使用 asyncio.create_subprocess_exec 創建異步子進程
-        capture_process = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        
-        # 異步等待進程完成或被終止
-        await capture_process.wait()
-        
-    except Exception as e:
-        print(f"Capture process error: {e}")
-    finally:
-        capture_active = False
-        capture_process = None
+@router.post("/deauth/send")
+async def send_deauth(request: DeauthRequest, service: WiFiService = Depends(get_wifi_service)):
+    return await service.send_deauth(request.interface, request.bssid, request.packets)
 
-@router.post("/wordlist-generator")
-async def generate_wordlist(request: WordlistRequest):
-    try:
-        # 確保檔案名稱合法
-        filename = request.output_filename
-        if not filename.endswith('.txt'):
-            filename += '.txt'
-            
-        # 建立生成器實例
-        generator = PasswordGenerator(output_file=f"static/wordlists/{filename}")
-        
-        # 從請求中取得資料
-        info_data = request.info_data
-        
-        # 生成密碼字典
-        generator.generate(
-            DATE=info_data.get('date', []),
-            TEL=info_data.get('tel', []),
-            NAME=info_data.get('name', []),
-            ID=info_data.get('ID', []),
-            SSID=info_data.get('SSID', [''])[0] if info_data.get('SSID') else ''
-        )
-        
-        # 讀取生成的檔案以取得樣本和行數
-        file_path = f"static/wordlists/{filename}"
-        with open(file_path, 'r') as f:
-            lines = f.readlines()
-            total_count = len(lines)
-            sample = ''.join(lines[:10]) # 只回傳前10行作為樣本
-            
-        return JSONResponse({
-            "success": True,
-            "filename": filename,
-            "count": total_count,
-            "sample": sample,
-            "download_link": f"/static/wordlists/{filename}"
-        })
-        
-    except Exception as e:
-        return JSONResponse({
-            "success": False,
-            "error": str(e)
-        })
-
-@router.get("/wordlists/list")
-async def list_wordlists():
-    """
-    列出可用的密碼字典檔案
-    """
-    try:
-        wordlists = []
-        
-        # 檢查 static/wordlists 目錄
-        wordlists_dir = "static/wordlists"
-        if os.path.exists(wordlists_dir):
-            for file in os.listdir(wordlists_dir):
-                if file.endswith('.txt'):
-                    file_path = os.path.join(wordlists_dir, file)
-                    if os.path.isfile(file_path):  # 確保是檔案而不是目錄
-                        file_stat = os.stat(file_path)
-                        wordlists.append({
-                            "filename": file,
-                            "path": f"wordlists/{file}",
-                            "size": file_stat.st_size,
-                            "category": "custom",
-                            "modified": datetime.fromtimestamp(file_stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
-                            "download_link": f"/static/wordlists/{file}"
-                        })
-        
-        # 檢查 static/wordlists/standard 目錄
-        standard_dir = "static/wordlists/standard"
-        if os.path.exists(standard_dir):
-            for file in os.listdir(standard_dir):
-                if file.endswith('.txt'):
-                    file_path = os.path.join(standard_dir, file)
-                    if os.path.isfile(file_path):  # 確保是檔案而不是目錄
-                        file_stat = os.stat(file_path)
-                        wordlists.append({
-                            "filename": file,
-                            "path": f"wordlists/standard/{file}",
-                            "size": file_stat.st_size,
-                            "category": "standard",
-                            "modified": datetime.fromtimestamp(file_stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
-                            "download_link": f"/static/wordlists/standard/{file}"
-                        })
-        
-        # 按類別和檔案名稱排序
-        wordlists.sort(key=lambda x: (x['category'], x['filename']))
-        
-        return {
-            "success": True,
-            "wordlists": wordlists,
-            "count": len(wordlists)
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error listing wordlists: {str(e)}",
-            "wordlists": [],
-            "count": 0
-        }
-
-@router.delete("/wordlists/custom/{filename}")
-async def delete_custom_wordlist(filename: str):
-    """
-    刪除指定的自定義密碼字典檔案（僅限 custom 目錄）
-    """
-    try:
-        # 安全檢查：確保檔案名稱只包含安全字符
-        import re
-        if not re.match(r'^[a-zA-Z0-9_.-]+\.txt$', filename):
-            return {
-                "success": False,
-                "message": "Invalid filename format"
-            }
-        
-        # 確保只能刪除 custom 目錄中的檔案
-        file_path = os.path.join("static/wordlists", filename)
-        
-        # 檢查檔案路徑是否在 standard 目錄中
-        if "standard" in filename or os.path.exists(os.path.join("static/wordlists/standard", filename)):
-            return {
-                "success": False,
-                "message": "Cannot delete standard wordlist files"
-            }
-        
-        # 檢查檔案是否存在
-        if not os.path.exists(file_path):
-            return {
-                "success": False,
-                "message": f"File not found: {filename}"
-            }
-        
-        # 確保不是目錄
-        if not os.path.isfile(file_path):
-            return {
-                "success": False,
-                "message": f"Not a file: {filename}"
-            }
-        
-        # 刪除檔案
-        os.remove(file_path)
-        
-        return {
-            "success": True,
-            "message": f"Successfully deleted {filename}"
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error deleting wordlist: {str(e)}"
-        }
+@router.post("/handshake/check")
+async def check_handshake(request: HandshakeCheckRequest, service: WiFiService = Depends(get_wifi_service)):
+    return await service.check_handshake(request.capture_file)
 
 @router.post("/capture/crack")
-async def crack_password(request: CrackPasswordRequest):
-    """
-    使用指定的字典檔案進行密碼破解
-    """
-    try:
-        # 構建 capture 文件的完整路徑
-        capture_path = os.path.join("data/captures", request.capture_file)
-        
-        # 檢查 capture 文件是否存在
-        if not os.path.exists(capture_path):
-            # 嘗試尋找最新的 capture 檔案
-            import glob
-            capture_dir = "data/captures"
-            if os.path.exists(capture_dir):
-                capture_files = glob.glob(os.path.join(capture_dir, "deauth_handshake*.cap"))
-                if capture_files:
-                    capture_path = max(capture_files, key=os.path.getmtime)
-                    request.capture_file = os.path.basename(capture_path)
-                else:
-                    return {
-                        "success": False,
-                        "message": f"No capture files found in {capture_dir}"
-                    }
-            else:
-                return {
-                    "success": False,
-                    "message": f"Capture directory not found: {capture_dir}"
-                }
-        
-        # 構建 wordlist 文件的完整路徑
-        wordlist_path = os.path.join("static", request.wordlist_file)
-        
-        # 檢查 wordlist 文件是否存在
-        if not os.path.exists(wordlist_path):
-            return {
-                "success": False,
-                "message": f"Wordlist file not found: {request.wordlist_file}"
-            }
-        
-        # 構建 aircrack-ng 破解指令
-        # sudo aircrack-ng capture-01.cap -w wordlist.txt
-        crack_command = [
-            "sudo", "aircrack-ng",
-            capture_path,
-            "-w", wordlist_path
-        ]
-        
-        # 執行指令 (這可能需要很長時間)
-        result = subprocess.run(
-            crack_command,
-            capture_output=True, 
-            text=True, 
-            timeout=300  # 5分鐘超時
-        )
-        
-        # 解析輸出尋找密碼
-        password_found = None
-        if "KEY FOUND!" in result.stdout:
-            # 從輸出中提取密碼
-            lines = result.stdout.split('\n')
-            for line in lines:
-                if "KEY FOUND!" in line:
-                    # 範例: "KEY FOUND! [ password123 ]"
-                    import re
-                    password_match = re.search(r'KEY FOUND!\s*\[\s*(.+?)\s*\]', line)
-                    if password_match:
-                        password_found = password_match.group(1)
-                    break
-        
-        return {
-            "success": True,
-            "message": "Password cracking completed",
-            "capture_file": request.capture_file,
-            "wordlist_file": request.wordlist_file,
-            "password_found": password_found,
-            "command": " ".join(crack_command),
-            "raw_output": result.stdout,
-            "return_code": result.returncode
-        }
-            
-    except subprocess.TimeoutExpired:
-        return {
-            "success": False,
-            "message": "Password cracking timed out (5 minutes). The wordlist might be too large or the password is not in the list."
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error during password cracking: {str(e)}"
-        }
+async def crack_password(request: CrackPasswordRequest, service: WiFiService = Depends(get_wifi_service)):
+    return await service.crack_password(request.capture_file, request.wordlist_file)
+
+@router.post("/wordlist-generator")
+async def generate_wordlist(request: WordlistRequest, service: WiFiService = Depends(get_wifi_service)):
+    return await service.generate_wordlist(request.output_filename, request.info_data)
+
+@router.get("/wordlists/list")
+async def list_wordlists(service: WiFiService = Depends(get_wifi_service)):
+    return await service.list_wordlists()
+
+@router.delete("/wordlists/custom/{filename}")
+async def delete_custom_wordlist(filename: str, service: WiFiService = Depends(get_wifi_service)):
+    return await service.delete_wordlist(filename)
 
 @router.post("/defense/scan")
-async def defense_scan(request: ScanWifiRequest):
-    """
-    使用 DefenseManager 掃描並分析 Wi-Fi 威脅
-    """
-    try:
-        # 創建 DefenseManager 實例
-        defense_manager = DefenseManager(iface=request.interface)
-        
-        # 執行 Wi-Fi 防禦掃描和分析
-        result = defense_manager.run_wifi_defense()
-        
-        return {
-            "success": True,
-            "module": result["module"],
-            "issues": result["issues"],
-            "threat": result["threat"],
-            "interface": request.interface
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Failed to scan and analyze Wi-Fi threats: {str(e)}",
-            "issues": [],
-            "threat": {"score": 0, "status": "UNKNOWN"}
-        }
+async def defense_scan(request: ScanWifiRequest, service: WiFiService = Depends(get_wifi_service)):
+    return await service.defense_scan(request.interface, request.timeout)

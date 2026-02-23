@@ -1,34 +1,30 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-import subprocess
-import os
-import signal
-import psutil
-from .mylib.beacon import beacon_emulator
-import json
-from pathlib import Path
 
-PROFILES_FILE = Path("data/beacon_profiles.json")
-PROFILES_FILE.parent.mkdir(exist_ok=True)
-
-# 確保設定檔檔案存在
-if not PROFILES_FILE.exists():
-    PROFILES_FILE.write_text("[]")
+from services.ble_service import BLEService
+from services.real.ble_real import BLERealService
 
 router = APIRouter(
     prefix="/BLE",
     tags=["BLE"]
 )
 
-running_process = None
-
 templates = Jinja2Templates(directory="templates")
 
+
+# ---------- Dependency ----------
+
+def get_ble_service() -> BLEService:
+    return BLERealService()
+
+
+# ---------- HTML page routes ----------
+
 @router.get("/beacon-scanner", response_class=HTMLResponse)
-def read_airpods_emulator(request: Request):
+def read_beacon_scanner(request: Request):
     return templates.TemplateResponse(
-        "BLE/beacon-scanner.html", 
+        "BLE/beacon-scanner.html",
         {"request": request, "message": "Beacon Scanner"}
     )
 
@@ -39,171 +35,59 @@ def read_beacon_storage(request: Request):
         {"request": request, "message": "Beacon Storage"}
     )
 
-@router.get("/beacon-storage/profiles")
-def get_profiles():
-    profiles = json.loads(PROFILES_FILE.read_text())
-    return profiles
-
-@router.post("/beacon-storage/profiles")
-async def add_profile(profile: dict):
-    profiles = json.loads(PROFILES_FILE.read_text())
-    profiles.append(profile)
-    PROFILES_FILE.write_text(json.dumps(profiles, indent=2))
-    return {"status": "success"}
-
-@router.delete("/beacon-storage/profiles/{name}")
-async def delete_profile(name: str):
-    profiles = json.loads(PROFILES_FILE.read_text())
-    profiles = [p for p in profiles if p["name"] != name]
-    PROFILES_FILE.write_text(json.dumps(profiles, indent=2))
-    return {"status": "success"}
-
 @router.get("/beacon-emulator", response_class=HTMLResponse)
 def read_beacon_emulator(request: Request):
     return templates.TemplateResponse(
-        "BLE/beacon-emulator.html", 
+        "BLE/beacon-emulator.html",
         {"request": request, "message": "Beacon Emulator"}
     )
 
-# 在文件頂部的 import 部分之後添加一個變量來跟踪 beacon 模擬器的狀態
-beacon_emulator_active = False
-
-# 修改 start_beacon_emulator 函數來設置狀態標誌
-@router.post("/beacon-emulator/start")
-async def start_beacon_emulator(data: dict):
-    global beacon_emulator_active
-    
-    profiles = json.loads(PROFILES_FILE.read_text())
-    profile = next((p for p in profiles if p["name"] == data["profile_name"]), None)
-    
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    
-    beacon_emulator.start_ibeacon(
-        uuid=profile["uuid"],
-        major=profile["major"],
-        minor=profile["minor"],
-        power=profile["power"]
-    )
-    
-    # 設置 beacon 模擬器狀態為活動
-    beacon_emulator_active = True
-    
-    return {"status": "started", "profile": profile["name"]}
-
-# 修改 stop_beacon_emulator 函數來更新狀態標誌
-@router.post("/beacon-emulator/stop")
-async def stop_beacon_emulator():
-    global beacon_emulator_active
-    
-    beacon_emulator.stop_ibeacon()
-    
-    # 設置 beacon 模擬器狀態為停止
-    beacon_emulator_active = False
-    
-    return {"status": "stopped"}
-
-# 添加新的狀態檢查路由
-@router.get("/beacon-emulator/status")
-async def get_beacon_emulator_status():
-    global beacon_emulator_active
-    
-    if beacon_emulator_active:
-        return {"status": "running"}
-    else:
-        return {"status": "not_running"}
-
 @router.get("/airpods-emulator", response_class=HTMLResponse)
-def read_airpods_emulator(request: Request):
+def read_airpods_emulator_page(request: Request):
     return templates.TemplateResponse(
-        "BLE/airpods-emulator.html", 
+        "BLE/airpods-emulator.html",
         {"request": request, "message": "Wordlist Generator"}
     )
 
+
+# ---------- API routes ----------
+
+@router.get("/beacon-storage/profiles")
+def get_profiles(service: BLEService = Depends(get_ble_service)):
+    return service.get_profiles()
+
+@router.post("/beacon-storage/profiles")
+async def add_profile(profile: dict, service: BLEService = Depends(get_ble_service)):
+    return await service.add_profile(profile)
+
+@router.delete("/beacon-storage/profiles/{name}")
+async def delete_profile(name: str, service: BLEService = Depends(get_ble_service)):
+    return await service.delete_profile(name)
+
+@router.post("/beacon-emulator/start")
+async def start_beacon_emulator(data: dict, service: BLEService = Depends(get_ble_service)):
+    return await service.start_beacon_emulator(data["profile_name"])
+
+@router.post("/beacon-emulator/stop")
+async def stop_beacon_emulator(service: BLEService = Depends(get_ble_service)):
+    return await service.stop_beacon_emulator()
+
+@router.get("/beacon-emulator/status")
+async def get_beacon_emulator_status(service: BLEService = Depends(get_ble_service)):
+    return await service.get_beacon_emulator_status()
+
 @router.post("/airpods-emulator/start")
-async def start_airpods_scan():
-    global running_process
-    
-    if running_process and running_process.poll() is None:
-        return {"status": "already_running", "pid": running_process.pid}
-    
-    try:
-        # 獲取當前環境變數
-        env = os.environ.copy()
-        
-        # 使用 sudo -E 保留環境變數
-        cmd = ["sudo", "-E", "python3", "api/mylib/apple_bleee/adv_airpods.py"]
-        
-        # 啟動進程
-        with open("airpods_output.log", "w") as out_file, open("airpods_error.log", "w") as err_file:
-            process = subprocess.Popen(
-                cmd,
-                stdout=out_file,
-                stderr=err_file,
-                text=True,
-                env=env,
-                preexec_fn=os.setsid
-            )
-        
-        running_process = process
-        return {"status": "started", "pid": process.pid}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to start: {str(e)}")
+async def start_airpods_scan(service: BLEService = Depends(get_ble_service)):
+    return await service.start_airpods_emulator()
 
 @router.post("/airpods-emulator/stop")
-async def stop_airpods_scan():
-    global running_process
-    
-    if not running_process:
-        return {"status": "not_running"}
-    
-    try:
-        # 獲取進程 PID
-        pid = running_process.pid
-        
-        # 終止主進程及其子進程
-        parent = psutil.Process(pid)
-        children = parent.children(recursive=True)
-        
-        for child in children:
-            child.terminate()
-        
-        # 終止主進程
-        parent.terminate()
-        
-        # 確保進程已終止
-        gone, alive = psutil.wait_procs([parent], timeout=3)
-        for p in alive:
-            p.kill()
-        
-        running_process = None
-        return {"status": "stopped", "pid": pid}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to stop: {str(e)}")
+async def stop_airpods_scan(service: BLEService = Depends(get_ble_service)):
+    return await service.stop_airpods_emulator()
 
 @router.get("/airpods-emulator/status")
-async def get_status():
-    global running_process
-    
-    if running_process and running_process.poll() is None:
-        return {"status": "running", "pid": running_process.pid}
-    else:
-        return {"status": "not_running"}
-    
+async def get_status(service: BLEService = Depends(get_ble_service)):
+    return await service.get_airpods_emulator_status()
+
 @router.get("/airpods-emulator/logs")
-async def get_logs():
-    try:
-        error_content = ""
-        output_content = ""
-        
-        if os.path.exists("airpods_error.log"):
-            with open("airpods_error.log", "r") as error_file:
-                error_content = error_file.read()
-                
-        if os.path.exists("airpods_output.log"):
-            with open("airpods_output.log", "r") as output_file:
-                output_content = output_file.read()
-                
-        return {"output": output_content, "errors": error_content}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to read logs: {str(e)}")
+async def get_logs(service: BLEService = Depends(get_ble_service)):
+    return await service.get_airpods_logs()
