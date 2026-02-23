@@ -66,7 +66,10 @@ async def delete_profile(name: str, service: BLEService = Depends(get_ble_servic
 
 @router.post("/beacon-emulator/start")
 async def start_beacon_emulator(data: dict, service: BLEService = Depends(get_ble_service)):
-    return await service.start_beacon_emulator(data["profile_name"])
+    result = await service.start_beacon_emulator(data.get("profile_name", ""))
+    if result.get("success") == False:
+        raise HTTPException(status_code=404, detail=result.get("message", "Not found"))
+    return result
 
 @router.post("/beacon-emulator/stop")
 async def stop_beacon_emulator(service: BLEService = Depends(get_ble_service)):

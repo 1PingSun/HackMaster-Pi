@@ -43,7 +43,7 @@ class BLERealService(BLEService):
         profiles = json.loads(PROFILES_FILE.read_text())
         profile = next((p for p in profiles if p["name"] == profile_name), None)
         if not profile:
-            raise HTTPException(status_code=404, detail="Profile not found")
+            return {"success": False, "message": "Profile not found"}
         beacon_emulator.start_ibeacon(
             uuid=profile["uuid"],
             major=profile["major"],
