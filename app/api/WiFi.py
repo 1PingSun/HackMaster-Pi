@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Request, BackgroundTasks, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -12,7 +13,8 @@ router = APIRouter(
     tags=["WiFi"]
 )
 
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 
 # ---------- Pydantic models ----------
