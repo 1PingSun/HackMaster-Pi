@@ -196,3 +196,32 @@ class WiFiMockService(WiFiService):
             "threat": {"score": 75, "status": "HIGH"},
             "interface": interface
         }
+
+    async def start_ap(self, config: Any) -> Dict[str, Any]:
+        return {"success": True, "message": "AP started successfully"}
+
+    async def stop_ap(self) -> Dict[str, Any]:
+        return {"success": True, "message": "AP stopped successfully"}
+
+    async def get_ap_status(self) -> Dict[str, Any]:
+        return {
+            "running": True,
+            "ssid": "Mock_AP",
+            "clients": 2,
+            "uptime": "00:15:30"
+        }
+
+    async def start_ap_capture(self) -> Dict[str, Any]:
+        return {"success": True, "message": "Capture started"}
+
+    async def stop_ap_capture(self) -> Dict[str, Any]:
+        return {"success": True, "message": "Capture stopped"}
+
+    async def list_ap_captures(self) -> Dict[str, Any]:
+        return {
+            "success": True,
+            "files": [
+                {"name": "capture_01.pcap", "size": "1.2 MB", "date": "2023-10-25 10:30:00"},
+                {"name": "capture_02.pcap", "size": "3.4 MB", "date": "2023-10-25 11:45:00"}
+            ]
+        }

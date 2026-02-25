@@ -141,6 +141,30 @@ async def get_interface_status(interface: str, service: WiFiService = Depends(ge
 async def scan_wifi(request: ScanWifiRequest, service: WiFiService = Depends(get_wifi_service)):
     return await service.scan_networks(request.interface, request.timeout)
 
+@router.post("/ap/start")
+async def start_ap(config: APConfig, service: WiFiService = Depends(get_wifi_service)):
+    return await service.start_ap(config)
+
+@router.post("/ap/stop")
+async def stop_ap(service: WiFiService = Depends(get_wifi_service)):
+    return await service.stop_ap()
+
+@router.get("/ap/status")
+async def get_ap_status(service: WiFiService = Depends(get_wifi_service)):
+    return await service.get_ap_status()
+
+@router.post("/ap/capture/start")
+async def start_ap_capture(service: WiFiService = Depends(get_wifi_service)):
+    return await service.start_ap_capture()
+
+@router.post("/ap/capture/stop")
+async def stop_ap_capture(service: WiFiService = Depends(get_wifi_service)):
+    return await service.stop_ap_capture()
+
+@router.get("/ap/capture/list")
+async def list_ap_captures(service: WiFiService = Depends(get_wifi_service)):
+    return await service.list_ap_captures()
+
 @router.post("/interface/channel")
 async def set_interface_channel(request: ChannelRequest, service: WiFiService = Depends(get_wifi_service)):
     return await service.set_channel(request.interface, request.channel)

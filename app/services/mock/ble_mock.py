@@ -52,3 +52,27 @@ class BLEMockService(BLEService):
             "output": "[demo] AirPods emulator running...\n[demo] Broadcasting BLE advertisement\n",
             "errors": ""
         }
+
+    async def scan_beacons(self, duration: int = 5) -> List[Dict[str, Any]]:
+        return [
+            {
+                "mac": "AA:BB:CC:DD:EE:FF",
+                "name": "Demo iBeacon 1",
+                "rssi": -59,
+                "uuid": "12345678-1234-1234-1234-123456789abc",
+                "major": 1,
+                "minor": 1,
+                "tx_power": -59,
+                "type": "iBeacon"
+            },
+            {
+                "mac": "11:22:33:44:55:66",
+                "name": "Demo iBeacon 2",
+                "rssi": -65,
+                "uuid": "87654321-4321-4321-4321-cba987654321",
+                "major": 2,
+                "minor": 2,
+                "tx_power": -65,
+                "type": "iBeacon"
+            }
+        ]

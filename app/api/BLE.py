@@ -58,6 +58,10 @@ def read_airpods_emulator_page(request: Request):
 def get_profiles(service: BLEService = Depends(get_ble_service)):
     return service.get_profiles()
 
+@router.get("/beacon-scanner/scan")
+async def scan_beacons(duration: int = 5, service: BLEService = Depends(get_ble_service)):
+    return await service.scan_beacons(duration)
+
 @router.post("/beacon-storage/profiles")
 async def add_profile(profile: dict, service: BLEService = Depends(get_ble_service)):
     return await service.add_profile(profile)

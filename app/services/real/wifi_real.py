@@ -540,3 +540,35 @@ class WiFiRealService(WiFiService):
                 "issues": [],
                 "threat": {"score": 0, "status": "UNKNOWN"}
             }
+
+    async def start_ap(self, config: Any) -> Dict[str, Any]:
+        # TODO: Implement real AP start logic
+        return {"success": True, "message": "AP started successfully"}
+
+    async def stop_ap(self) -> Dict[str, Any]:
+        # TODO: Implement real AP stop logic
+        return {"success": True, "message": "AP stopped successfully"}
+
+    async def get_ap_status(self) -> Dict[str, Any]:
+        # TODO: Implement real AP status logic
+        return {
+            "running": True,
+            "ssid": "Real_AP",
+            "clients": 0,
+            "uptime": "00:00:00"
+        }
+
+    async def start_ap_capture(self) -> Dict[str, Any]:
+        # TODO: Implement real AP capture start logic
+        return {"success": True, "message": "Capture started"}
+
+    async def stop_ap_capture(self) -> Dict[str, Any]:
+        # TODO: Implement real AP capture stop logic
+        return {"success": True, "message": "Capture stopped"}
+
+    async def list_ap_captures(self) -> Dict[str, Any]:
+        # TODO: Implement real AP capture list logic
+        return {
+            "success": True,
+            "files": []
+        }

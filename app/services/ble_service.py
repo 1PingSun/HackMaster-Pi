@@ -33,3 +33,6 @@ class BLEService(ABC):
 
     @abstractmethod
     async def get_airpods_logs(self) -> Dict[str, Any]: ...
+
+    @abstractmethod
+    async def scan_beacons(self, duration: int = 5) -> List[Dict[str, Any]]: ...

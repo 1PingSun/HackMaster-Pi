@@ -10,6 +10,7 @@ from fastapi import HTTPException
 
 from services.ble_service import BLEService
 from api.mylib.beacon import beacon_emulator
+from api.mylib.beacon.beacon_scanner import BeaconScanner
 
 PROFILES_FILE = Path("data/beacon_profiles.json")
 PROFILES_FILE.parent.mkdir(exist_ok=True)
@@ -124,3 +125,11 @@ class BLERealService(BLEService):
             return {"output": output_content, "errors": error_content}
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to read logs: {str(e)}")
+
+    async def scan_beacons(self, duration: int = 5) -> List[Dict[str, Any]]:
+        try:
+            scanner = BeaconScanner(scan_duration=duration)
+            beacons = await scanner.scan()
+            return beacons
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to scan beacons: {str(e)}")
