@@ -14,11 +14,26 @@ capture_active = False
 ap_running = False
 ap_capture_active = False
 mock_capture_files = [
-    {"id": "1", "filename": "ap_capture_demo.pcap", "size": 204800, "timestamp": "2025-01-01T12:00:00"}
+    {"id": "1", "filename": "ap_capture_20250310_143022.pcap", "size": 204800, "timestamp": "2025-03-10T14:30:22"},
+    {"id": "2", "filename": "ap_capture_20250311_091500.pcap", "size": 87040,  "timestamp": "2025-03-11T09:15:00"},
 ]
 mock_wordlists = [
-    {"filename": "rockyou-top1000.txt", "path": "/usr/share/wordlists/rockyou-top1000.txt", "size": 8192, "category": "standard"},
-    {"filename": "common-passwords.txt", "path": "/usr/share/wordlists/common-passwords.txt", "size": 4096, "category": "standard"},
+    {
+        "filename": "rockyou-top1000.txt",
+        "path": "/usr/share/wordlists/rockyou-top1000.txt",
+        "size": 8192,
+        "category": "standard",
+        "modified": "2024-01-15 08:30:00",
+        "download_link": "/WiFi/wordlists/standard/rockyou-top1000.txt",
+    },
+    {
+        "filename": "common-passwords.txt",
+        "path": "/usr/share/wordlists/common-passwords.txt",
+        "size": 4096,
+        "category": "standard",
+        "modified": "2024-03-02 12:00:00",
+        "download_link": "/WiFi/wordlists/standard/common-passwords.txt",
+    },
 ]
 
 class InterfaceRequest(BaseModel):
@@ -97,16 +112,21 @@ async def get_interface_status(interface: str):
         "interface": interface,
         "mode": "Monitor",
         "status": "Monitor mode (Demo)",
-        "output": "Mock iwconfig output..."
+        "output": f"{interface}  IEEE 802.11  Mode:Monitor  Frequency:2.437 GHz  Tx-Power=20 dBm"
     }
 
 @router.post("/ap/scan")
 async def scan_wifi(request: ScanWifiRequest):
-    await asyncio.sleep(request.timeout)
+    await asyncio.sleep(min(request.timeout, 3))
     mock_aps = [
-        {"ssid": "Demo_WiFi_1", "bssid": "00:11:22:33:44:55", "channel": 1, "signal": -45, "encryption": "WPA2"},
-        {"ssid": "Demo_WiFi_2", "bssid": "AA:BB:CC:DD:EE:FF", "channel": 6, "signal": -60, "encryption": "WPA3"},
-        {"ssid": "Guest_Network", "bssid": "12:34:56:78:90:AB", "channel": 11, "signal": -80, "encryption": "OPEN"}
+        {"BSSID": "F4:CF:A2:7E:23:10", "CH": 1,  "ENC": "WPA2", "ESSID": "Huang-Family-5G"},
+        {"BSSID": "A0:C5:89:3B:11:08", "CH": 6,  "ENC": "WPA3", "ESSID": "TechCorp-Guest"},
+        {"BSSID": "B8:27:EB:4A:2C:01", "CH": 11, "ENC": "OPN",  "ESSID": "FREE_AIRPORT_WIFI"},
+        {"BSSID": "C8:D7:19:A3:58:02", "CH": 6,  "ENC": "WEP",  "ESSID": "OfficeNet_2.4G"},
+        {"BSSID": "4C:ED:FB:91:22:30", "CH": 3,  "ENC": "WPA2", "ESSID": "ASUS_RT-AX88U"},
+        {"BSSID": "3C:37:86:44:55:F2", "CH": 1,  "ENC": "OPN",  "ESSID": "Huang-Family-5G"},
+        {"BSSID": "78:44:FD:82:0A:19", "CH": 11, "ENC": "WPA2", "ESSID": "TP-LINK_HomeNet"},
+        {"BSSID": "D4:6E:0E:CF:74:88", "CH": 6,  "ENC": "WPA2", "ESSID": "NETGEAR-Office"},
     ]
     return {
         "success": True,
@@ -123,7 +143,7 @@ async def set_interface_channel(request: ChannelRequest):
 async def start_capture(request: CaptureRequest, background_tasks: BackgroundTasks):
     global capture_active
     capture_active = True
-    return {"success": True, "message": "Demo: Traffic capture started", "capture_file": "deauth_handshake-01.cap", "command": "sudo airodump-ng mock"}
+    return {"success": True, "message": "Demo: Traffic capture started", "capture_file": "deauth_handshake-01.cap", "command": "sudo airodump-ng --bssid {} --channel {} -w deauth_handshake {}".format(request.bssid, request.channel, request.interface)}
 
 @router.post("/capture/stop")
 async def stop_capture():
@@ -138,15 +158,24 @@ async def send_deauth(request: DeauthRequest):
 
 @router.post("/handshake/check")
 async def check_handshake(request: HandshakeCheckRequest):
+    capture_file = request.capture_file or "deauth_handshake-01.cap"
     return {
         "success": True,
         "message": "Demo: Found 1 handshake(s) in 1 network(s)",
-        "capture_file": request.capture_file or "deauth_handshake-01.cap",
+        "capture_file": capture_file,
         "total_handshakes": 1,
         "total_networks": 1,
-        "networks": [{"number": 1, "bssid": "00:11:22:33:44:55", "essid": "Demo_WiFi_1", "encryption": "WPA2 (1 handshake)", "handshakes": 1}],
-        "command": "aircrack-ng mock",
-        "raw_output": "Mock aircrack-ng output detailing 1 handshake..."
+        "networks": [
+            {
+                "number": 1,
+                "bssid": "F4:CF:A2:7E:23:10",
+                "essid": "Huang-Family-5G",
+                "encryption": "WPA2 (1 handshake)",
+                "handshakes": 1
+            }
+        ],
+        "command": f"aircrack-ng -w <wordlist> {capture_file}",
+        "raw_output": "Reading packets, please wait...\nOpening deauth_handshake-01.cap\n#  BSSID              ESSID                     Encryption\n1  F4:CF:A2:7E:23:10  Huang-Family-5G           WPA (1 handshake)"
     }
 
 # --- Interface ---
@@ -157,7 +186,7 @@ async def get_interface_details():
         "success": True,
         "message": "Demo: Found 2 network adapter(s)",
         "adapters": ["wlan0", "wlan1"],
-        "output": "wlan0: IEEE 802.11 Mode:Managed\nwlan1: IEEE 802.11 Mode:Monitor"
+        "output": "wlan0: IEEE 802.11  Mode:Managed  Frequency:2.437 GHz  Access Point: F4:CF:A2:7E:23:10\nwlan1: IEEE 802.11  Mode:Monitor  Frequency:2.437 GHz  Tx-Power=20 dBm"
     }
 
 @router.get("/interface/list")
@@ -188,8 +217,9 @@ async def get_ap_status():
     clients = []
     if ap_running:
         clients = [
-            {"mac": "AA:BB:CC:DD:EE:01", "ip": "192.168.4.2", "hostname": "demo-device-1", "connected_since": "00:01:23"},
-            {"mac": "AA:BB:CC:DD:EE:02", "ip": "192.168.4.3", "hostname": "demo-device-2", "connected_since": "00:00:45"},
+            {"mac": "A4:83:E7:2D:14:C1", "ip": "192.168.4.2", "hostname": "iPhone-14-Pro",    "connected_time": "00:04:37"},
+            {"mac": "BC:9C:31:F8:5A:0E", "ip": "192.168.4.3", "hostname": "MacBook-Air-M2",   "connected_time": "00:01:52"},
+            {"mac": "60:A4:4C:3E:7B:D9", "ip": "192.168.4.4", "hostname": "Galaxy-S23-Ultra",  "connected_time": "00:00:18"},
         ]
     return {"success": True, "connected_clients": clients}
 
@@ -224,24 +254,30 @@ async def download_ap_capture(capture_id: str):
 
 @router.get("/wordlists/list")
 async def list_wordlists():
-    return {"success": True, "wordlists": mock_wordlists}
+    return {"success": True, "wordlists": mock_wordlists, "count": len(mock_wordlists)}
 
 @router.post("/wordlist-generator")
 async def generate_wordlist(request: WordlistGenerateRequest):
     await asyncio.sleep(1)
     filename = request.output_filename if request.output_filename.endswith(".txt") else request.output_filename + ".txt"
-    sample_passwords = ["password123", "admin2024", "hackmaster1", "qwerty123", "letmein"]
+    sample_passwords = [
+        "sunshine2023", "admin@home1", "password123!", "qwerty2024",
+        "letmein99", "iloveyou2023", "dragon123", "monkey2024"
+    ]
     new_wordlist = {
         "filename": filename,
         "path": f"/tmp/{filename}",
         "size": random.randint(2048, 20480),
-        "category": "custom"
+        "category": "custom",
+        "modified": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "download_link": f"/WiFi/wordlists/custom/{filename}",
     }
     mock_wordlists.append(new_wordlist)
+    count = random.randint(200, 5000)
     return {
         "success": True,
         "filename": filename,
-        "count": random.randint(100, 5000),
+        "count": count,
         "sample": "\n".join(sample_passwords),
         "download_link": f"/WiFi/wordlists/custom/{filename}"
     }
@@ -263,9 +299,8 @@ async def crack_capture(request: CrackRequest):
     return {
         "success": True,
         "message": "Demo: Password found!",
-        "password_found": True,
-        "password": "demo_password123",
-        "wordlist": request.wordlist_file or "rockyou-top1000.txt"
+        "password_found": "sunshine2023",
+        "wordlist_file": request.wordlist_file or "rockyou-top1000.txt"
     }
 
 # --- Defense ---
@@ -275,10 +310,71 @@ async def defense_scan(request: DefenseScanRequest):
     await asyncio.sleep(request.timeout * 0.2)
     return {
         "success": True,
-        "threat": {"score": 65, "status": "WARNING"},
+        "threat": {"score": 82, "status": "CRITICAL"},
         "issues": [
-            {"type": "open_network", "risk": "HIGH", "detail": "Demo: Open network detected (no encryption)"},
-            {"type": "weak_password", "risk": "MEDIUM", "detail": "Demo: Weak WPA2 password on Demo_WiFi_1"},
-            {"type": "wps_enabled", "risk": "LOW", "detail": "Demo: WPS enabled on Guest_Network"},
-        ]
+            {
+                "type": "evil_twin",
+                "risk": "CRITICAL",
+                "ssid": "Huang-Family-5G",
+                "count": 2,
+                "bssids": ["F4:CF:A2:7E:23:10", "3C:37:86:44:55:F2"],
+                "ap_details": [
+                    {"bssid": "F4:CF:A2:7E:23:10", "signal": -43, "channel": 1, "encryption": "WPA2"},
+                    {"bssid": "3C:37:86:44:55:F2", "signal": -67, "channel": 1, "encryption": "OPEN"},
+                ],
+                "recommendation": "Multiple APs detected with the same SSID — verify which is legitimate and avoid connecting to the unencrypted one",
+            },
+            {
+                "type": "open_network",
+                "risk": "HIGH",
+                "ssid": "FREE_AIRPORT_WIFI",
+                "bssid": "B8:27:EB:4A:2C:01",
+                "signal": -61,
+                "signal_quality": "Medium",
+                "channel": 11,
+                "band": "2.4GHz",
+                "frequency": "2.462 GHz",
+                "encryption": "OPEN",
+                "recommendation": "Avoid using open networks; if required, use a VPN to encrypt all traffic",
+            },
+            {
+                "type": "weak_encryption",
+                "risk": "HIGH",
+                "ssid": "OfficeNet_2.4G",
+                "bssid": "C8:D7:19:A3:58:02",
+                "signal": -74,
+                "signal_quality": "Weak",
+                "channel": 6,
+                "band": "2.4GHz",
+                "frequency": "2.437 GHz",
+                "encryption": "WEP",
+                "recommendation": "WEP is deprecated and trivially cracked; upgrade the router to WPA3 immediately",
+            },
+            {
+                "type": "wps_enabled",
+                "risk": "MEDIUM",
+                "ssid": "ASUS_RT-AX88U",
+                "bssid": "4C:ED:FB:91:22:30",
+                "signal": -55,
+                "signal_quality": "Good",
+                "channel": 3,
+                "band": "2.4GHz",
+                "frequency": "2.422 GHz",
+                "encryption": "WPA2",
+                "recommendation": "Disable WPS on your router to prevent Pixie Dust and PIN brute-force attacks",
+            },
+            {
+                "type": "weak_password",
+                "risk": "MEDIUM",
+                "ssid": "TP-LINK_HomeNet",
+                "bssid": "78:44:FD:82:0A:19",
+                "signal": -68,
+                "signal_quality": "Medium",
+                "channel": 11,
+                "band": "2.4GHz",
+                "frequency": "2.462 GHz",
+                "encryption": "WPA2",
+                "recommendation": "Use a password of at least 16 characters mixing letters, numbers, and symbols",
+            },
+        ],
     }
