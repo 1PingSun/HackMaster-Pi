@@ -18,8 +18,8 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
     return templates.TemplateResponse(
-        "index.html", 
-        {"request": request}
+        request=request,
+        name="index.html",
     )
 
 @app.get("/favicon.ico", include_in_schema=False)

@@ -1,17 +1,5 @@
 fastapi>=0.95.0
 uvicorn>=0.21.1
 jinja2>=3.1.2
-psutil>=7.0.0
+pydantic
 anyio>=3.6.2,<4.0
-bs4
-fleep
-Pillow
-# pybluez
-requests
-# pycrypto
-pycryptodome
-netifaces
-prettytable
-libarchive-c
-ctypescrypto
-pn532pi

@@ -1,131 +1,53 @@
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import Dict, List
-from .mylib.WeakPasswordGenerater.main import PasswordGenerator
-from .mylib.RFIDlib import main as RFIDlib
-from .mylib.defense.defense_manager import DefenseManager
-import os
-import time
-import json
 import asyncio
-from datetime import datetime
-import random
-import binascii
 
-router = APIRouter(
-    prefix="/RFID",
-    tags=["RFID"]
-)
-
+router = APIRouter(prefix="/RFID", tags=["RFID"])
 templates = Jinja2Templates(directory="templates")
 
-RFID_DATA_DIR = "data/rfid"
-
-# 定義寫入請求模型
 class WriteCardRequest(BaseModel):
     card_data: Dict
     save_to_db: bool = False
 
-# 定義請求模型
-class SaveCardsRequest(BaseModel):
-    cards: List[Dict]
-    filename: str
-
-# 模擬狀態變數，實際應用中可能需要更複雜的狀態管理
-emulation_active = False
-emulation_data = None
-emulation_start_time = None
-read_attempts = 0
-
-# 定義模擬請求模型
-class EmulationRequest(BaseModel):
-    uid: str
-    type: str
-    data: str
-
 @router.get("/identify-rfid", response_class=HTMLResponse)
 def identify_rfid(request: Request):
-    return templates.TemplateResponse(
-        "RFID/identify-rfid.html",
-        {"request": request, "message": "Identify RFID Card"}
-    )
+    return templates.TemplateResponse(request=request, name="RFID/identify-rfid.html", context={"message": "Identify RFID Card"})
 
 @router.get("/write-uid", response_class=HTMLResponse)
 def write_uid(request: Request):
-    return templates.TemplateResponse(
-        "RFID/write-uid.html",
-        {"request": request, "message": "Write UID to HF RFID CUID Card"}
-    )
+    return templates.TemplateResponse(request=request, name="RFID/write-uid.html", context={"message": "Write UID to HF RFID CUID Card"})
 
 @router.post("/setup-pn532")
 async def setup_pn532(request: Request):
-    try:
-        result = RFIDlib.setup()
-        return JSONResponse(content=result)
-    except Exception as e:
-        return JSONResponse(content={"success": False, "error": str(e)})
+    return JSONResponse(content={"success": True, "message": "Demo mode: PN532 Simulated Setup OK"})
 
 @router.post("/identify-rfid")
 async def identify_rfid_post(request: Request):
-    try:
-        found = RFIDlib.iso14443a_identify()
-        while not found["success"]:
-            await asyncio.sleep(0.1)
-            found = RFIDlib.iso14443a_identify()
-        return JSONResponse(content=found)
-    except Exception as e:
-        return JSONResponse(content={"success": False, "error": str(e)})
-    
+    await asyncio.sleep(1.0)
+    return JSONResponse(content={
+        "success": True,
+        "uid": "04A1B2C3",
+        "type": "MIFARE Classic 1K",
+        "sak": "08",
+        "atqa": "04"
+    })
+
 @router.post("/write-uid")
 async def write_uid_post(request: Request, write_request: WriteCardRequest):
-    try:
-        new_uid_hex = write_request.card_data.get("uid")
-        if not new_uid_hex:
-            return JSONResponse(content={"success": False, "error": "UID is required"})
-        
-        if len(new_uid_hex) != 8:
-            print("❌ UID UID must be 8 hexadecimal characters")
-            return JSONResponse(content={"success": False, "error": "UID must be 8 hexadecimal characters"})
-        
-        try:
-            binascii.unhexlify(new_uid_hex)
-        except:
-            print("❌ UID contains invalid characters")
-            return JSONResponse(content={"success": False, "error": "UID contains invalid characters"})
-        
-        result = RFIDlib.write_uid(new_uid_hex)
-        return JSONResponse(content=result)
-
-    except Exception as e:
-        return JSONResponse(content={"success": False, "error": str(e)})
+    new_uid_hex = write_request.card_data.get("uid")
+    if not new_uid_hex or len(new_uid_hex) != 8:
+        return JSONResponse(content={"success": False, "error": "UID must be 8 hexadecimal characters"})
+    await asyncio.sleep(1.0)
+    return JSONResponse(content={"success": True, "message": f"Successfully wrote fake UID: {new_uid_hex}"})
 
 @router.post("/analyze")
 async def analyze_rfid(request: Request):
-    """
-    分析 RFID 卡片的安全性
-    """
-    try:
-        data = await request.json()
-        card_info = data.get("card_info", {})
-        
-        # 創建 DefenseManager 實例
-        defense_manager = DefenseManager()
-        
-        # 執行 RFID 防禦分析
-        result = defense_manager.run_rfid_defense(card_info)
-        
-        return JSONResponse(content={
-            "success": True,
-            "module": result["module"],
-            "issues": result["issues"],
-            "threat": result["threat"]
-        })
-    except Exception as e:
-        return JSONResponse(content={
-            "success": False,
-            "error": str(e),
-            "issues": [],
-            "threat": {"score": 0, "status": "UNKNOWN"}
-        })
+    return JSONResponse(content={
+        "success": True,
+        "module": "Demo Analyzer",
+        "issues": ["Default Key Found (Demo)", "Weak Authentication"],
+        "threat": {"score": 75, "status": "HIGH THREAT"}
+    })
