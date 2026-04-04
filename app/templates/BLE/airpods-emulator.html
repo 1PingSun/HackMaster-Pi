@@ -1,52 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-    <title>Airpods Emulator - HackMaster Pi</title>
-    <meta name="theme-color" content="#0f0f17">
-</head>
-<body>
-    <div class="container">
-        <div class="header-container">
-            <a href="/" class="back-button">← BACK</a>
-            <h1>AirPods Emulator</h1>
-        </div>
-        <button id="control-button" type="button">
-            <span id="button-text">Loading...</span>
-            <span class="loading" id="loading-spinner"></span>
-        </button>
-        <div class="status-indicator" id="status-indicator"></div>
+{% extends "base.html" %}
+
+{% block title %}AirPods Emulator - HackMaster Pi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">AirPods Emulator</h2>
+    <p class="page-subtitle">Mimic Apple AirPods Pro BLE advertising packets to trigger UI popups on nearby iOS devices.
+    </p>
+</div>
+
+<div class="form-section" style="max-width: 600px;">
+    <h3>Emulator Control</h3>
+    <div class="status-indicator status-stopped" id="status-indicator"
+        style="margin-bottom: 2rem; font-family: var(--font-mono); padding: 1.25rem; border-radius: 12px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); font-size: 1.1rem; color: var(--text-muted); text-align: center;">
+        EMULATOR OFFLINE
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const controlButton = document.getElementById('control-button');
-            const buttonText = document.getElementById('button-text');
-            const loadingSpinner = document.getElementById('loading-spinner');
-            const statusIndicator = document.getElementById('status-indicator');
-            
-            // 初始狀態檢查
-            checkStatus();
-            
-            // 定時檢查狀態（每 5 秒）
-            setInterval(checkStatus, 5000);
-            
-            // 按鈕點擊事件
-            controlButton.addEventListener('click', function() {
-                // 顯示loading狀態
-                controlButton.disabled = true;
-                loadingSpinner.style.display = 'inline-block';
-                
-                if (controlButton.classList.contains('stop')) {
-                    // 如果目前是停止按鈕，發送停止請求
-                    fetch('/BLE/airpods-emulator/stop', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    })
+    <div class="btn-group" style="justify-content: center;">
+        <button class="btn btn-primary" id="control-button" type="button"
+            style="padding: 1rem 3rem; font-size: 1.1rem;">
+            <span id="button-text">Loading...</span>
+            <span class="spinner" id="loading-spinner" style="display: none; margin-left: 15px;"></span>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const controlButton = document.getElementById('control-button');
+        const buttonText = document.getElementById('button-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const statusIndicator = document.getElementById('status-indicator');
+
+        // 初始狀態檢查
+        checkStatus();
+
+        // 定時檢查狀態（每 5 秒）
+        setInterval(checkStatus, 5000);
+
+        // 按鈕點擊事件
+        controlButton.addEventListener('click', function () {
+            // 顯示loading狀態
+            controlButton.disabled = true;
+            loadingSpinner.style.display = 'inline-block';
+
+            if (controlButton.classList.contains('stop')) {
+                // 如果目前是停止按鈕，發送停止請求
+                fetch('/BLE/airpods-emulator/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
                     .then(response => response.json())
                     .then(data => {
                         console.log('Stop response:', data);
@@ -60,14 +67,14 @@
                         loadingSpinner.style.display = 'none';
                         controlButton.disabled = false;
                     });
-                } else {
-                    // 如果目前是啟動按鈕，發送啟動請求
-                    fetch('/BLE/airpods-emulator/start', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    })
+            } else {
+                // 如果目前是啟動按鈕，發送啟動請求
+                fetch('/BLE/airpods-emulator/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
                     .then(response => response.json())
                     .then(data => {
                         console.log('Start response:', data);
@@ -81,51 +88,55 @@
                         loadingSpinner.style.display = 'none';
                         controlButton.disabled = false;
                     });
-                }
-            });
-            
-            // 檢查當前狀態
-            function checkStatus() {
-                fetch('/BLE/airpods-emulator/status')
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Status:', data);
-                        updateUI(data);
-                    })
-                    .catch(error => {
-                        console.error('Error checking status:', error);
-                        showError('無法獲取模擬器狀態');
-                    });
-            }
-            
-            // 更新UI
-            function updateUI(data) {
-                controlButton.disabled = false;
-                loadingSpinner.style.display = 'none';
-                
-                if (data.status === 'running') {
-                    // 如果正在運行，顯示停止按鈕
-                    buttonText.textContent = 'TERMINATE';
-                    controlButton.classList.add('stop');
-                    statusIndicator.textContent = `EMULATOR ONLINE [PID: ${data.pid}]`;
-                    statusIndicator.className = 'status-indicator status-running';
-                } else {
-                    // 如果未運行，顯示啟動按鈕
-                    buttonText.textContent = 'ACTIVATE';
-                    controlButton.classList.remove('stop');
-                    statusIndicator.textContent = 'EMULATOR OFFLINE';
-                    statusIndicator.className = 'status-indicator status-stopped';
-                }
-            }
-            
-            // 顯示錯誤
-            function showError(message) {
-                statusIndicator.textContent = `ERROR: ${message.toUpperCase()}`;
-                statusIndicator.className = 'status-indicator status-stopped';
-                controlButton.disabled = false;
-                loadingSpinner.style.display = 'none';
             }
         });
-    </script>
-</body>
-</html>
+
+        // 檢查當前狀態
+        function checkStatus() {
+            fetch('/BLE/airpods-emulator/status')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Status:', data);
+                    updateUI(data);
+                })
+                .catch(error => {
+                    console.error('Error checking status:', error);
+                    showError('無法獲取模擬器狀態');
+                });
+        }
+
+        // 更新UI
+        function updateUI(data) {
+            controlButton.disabled = false;
+            loadingSpinner.style.display = 'none';
+
+            if (data.status === 'running') {
+                // 如果正在運行，顯示停止按鈕
+                buttonText.textContent = 'TERMINATE';
+                controlButton.classList.remove('btn-primary');
+                controlButton.classList.add('btn-danger', 'stop');
+                statusIndicator.textContent = `EMULATOR ONLINE [PID: ${data.pid}]`;
+                statusIndicator.style.color = 'var(--success)';
+                statusIndicator.style.borderColor = 'rgba(46, 213, 115, 0.4)';
+            } else {
+                // 如果未運行，顯示啟動按鈕
+                buttonText.textContent = 'ACTIVATE';
+                controlButton.classList.remove('btn-danger', 'stop');
+                controlButton.classList.add('btn-primary');
+                statusIndicator.textContent = 'EMULATOR OFFLINE';
+                statusIndicator.style.color = 'var(--text-muted)';
+                statusIndicator.style.borderColor = 'var(--border)';
+            }
+        }
+
+        // 顯示錯誤
+        function showError(message) {
+            statusIndicator.textContent = `ERROR: ${message.toUpperCase()}`;
+            statusIndicator.style.color = 'var(--danger)';
+            statusIndicator.style.borderColor = 'rgba(255, 71, 87, 0.4)';
+            controlButton.disabled = false;
+            loadingSpinner.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

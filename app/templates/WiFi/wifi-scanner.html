@@ -1,563 +1,499 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-    <title>Wi-Fi Defense Scanner - HackMaster Pi</title>
-    <meta name="theme-color" content="#0f0f17">
-    <style>
-        .threat-score-display {
-            text-align: center;
-            padding: 20px;
-        }
+{% extends "base.html" %}
 
-        .threat-score {
-            font-size: 72px;
-            font-weight: bold;
-            color: #00ff88;
-        }
+{% block title %}Wi-Fi Defense Scanner - HackMaster Pi{% endblock %}
 
-        .threat-status {
-            font-size: 24px;
-            font-weight: bold;
-            margin-top: 10px;
-        }
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">Wi-Fi Threat Scanner</h2>
+    <p class="page-subtitle">Scan proximity for wireless networks, analyze potential threats such as Evil Twins and Open
+        Access configurations, and generate an active vulnerability scorecard.</p>
+</div>
 
-        .threat-bar-container {
-            width: 100%;
-            height: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 20px;
-        }
+<div class="dashboard-grid" style="grid-template-columns: 1fr;">
 
-        .threat-bar {
-            height: 100%;
-            transition: width 0.5s ease, background-color 0.5s ease;
-        }
-
-        .threat-bar.threat-safe {
-            background: linear-gradient(90deg, #2ed573, #7bed9f);
-        }
-
-        .threat-bar.threat-warning {
-            background: linear-gradient(90deg, #ffa502, #ff6348);
-        }
-
-        .threat-bar.threat-critical {
-            background: linear-gradient(90deg, #ff4757, #ff6b81);
-        }
-
-        .issues-container {
-            margin-top: 30px;
-        }
-
-        .issues-container h3 {
-            color: #00ff88;
-            margin-bottom: 15px;
-        }
-
-        .issue-item {
-            background: rgba(255, 255, 255, 0.05);
-            border-left: 4px solid #00ff88;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-        }
-
-        .issue-item.issue-critical {
-            border-left-color: #ff4757;
-        }
-
-        .issue-item.issue-high {
-            border-left-color: #ff6348;
-        }
-
-        .issue-item.issue-medium {
-            border-left-color: #ffa502;
-        }
-
-        .issue-item.issue-low {
-            border-left-color: #70a1ff;
-        }
-
-        .issue-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .issue-type {
-            font-weight: bold;
-            font-size: 16px;
-            color: #fff;
-        }
-
-        .issue-risk {
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .risk-critical {
-            background: #ff4757;
-            color: #fff;
-        }
-
-        .risk-high {
-            background: #ff6348;
-            color: #fff;
-        }
-
-        .risk-medium {
-            background: #ffa502;
-            color: #fff;
-        }
-
-        .risk-low {
-            background: #70a1ff;
-            color: #fff;
-        }
-
-        .issue-detail {
-            color: #ddd;
-            margin: 5px 0;
-            font-size: 14px;
-        }
-
-        .issue-recommendation {
-            margin-top: 10px;
-            padding: 10px;
-            background: rgba(0, 255, 136, 0.1);
-            border-radius: 3px;
-            color: #00ff88;
-            font-size: 14px;
-        }
-
-        .no-issues {
-            text-align: center;
-            padding: 30px;
-            color: #2ed573;
-            font-size: 18px;
-        }
-
-        .wifi-input {
-            width: 100%;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(0, 255, 136, 0.3);
-            color: #fff;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        .wifi-input:focus {
-            outline: none;
-            border-color: #00ff88;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header-container">
-            <a href="/" class="back-button">← BACK</a>
-            <h1>Wi-Fi Defense Scanner</h1>
-        </div>
-        
-        <div class="info-guide">
-            <h3>Wi-Fi Defense & Threat Analysis</h3>
-            <p>This tool scans for nearby Wi-Fi networks, analyzes potential security threats, and provides threat scoring based on detected vulnerabilities.</p>
-            <p><strong>Features:</strong> Open network detection, Evil Twin detection, threat scoring system</p>
+    <!-- Step 1: Select Network Interface -->
+    <div class="glass-card" id="interface-section" style="padding: 1.5rem 2rem; margin-bottom: 0;">
+        <div class="flex-row" style="justify-content: space-between; margin-bottom: 1rem;">
+            <div>
+                <h3 style="margin-bottom: 0.5rem; color: #fff;">1. Uplink Interface Configuration</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Probe physical hardware stack to detect and
+                    select an active wireless interface.</p>
+            </div>
+            <button id="list-interfaces-btn" class="btn btn-primary">LIST INTERFACES</button>
         </div>
 
-        <div class="wifi-cracker-container">
-            <!-- Step 1: Select Network Interface -->
-            <div class="wifi-cracker-section" id="interface-section">
-                <h2>1. Select Network Interface</h2>
-                <div class="wifi-controls">
-                    <button id="list-interfaces-btn" class="wifi-button">List Interfaces</button>
+        <div id="interface-status"
+            style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--primary); margin-bottom: 0.5rem; min-height: 20px;">
+        </div>
+
+        <div id="interface-select-container" style="display: none; margin-top: 1rem;">
+            <select id="interface-select" class="styled-select" style="max-width: 400px;">
+                <option value="">-- SELECT AN INTERFACE --</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Step 2: Scan & Analyze -->
+    <div class="glass-card" id="scan-section" style="padding: 1.5rem 2rem; margin-bottom: 0;">
+        <div class="flex-row" style="justify-content: space-between; margin-bottom: 1rem;">
+            <div>
+                <h3 style="margin-bottom: 0.5rem; color: #fff;">2. Airspace Reconnaissance</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Initiate an active sweep of the local airspace
+                    and execute heuristic threat assessment.</p>
+            </div>
+            <button id="scan-button" class="btn btn-danger" disabled>
+                <span id="scan-button-text">INITIATE SWEEP</span>
+                <span class="spinner" id="scan-spinner" style="display: none; margin-left: 10px;"></span>
+            </button>
+        </div>
+
+        <div id="scan-status"
+            style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--primary); text-align: right; min-height: 20px;">
+        </div>
+    </div>
+
+    <!-- Step 3: Threat Analysis Results -->
+    <div id="threat-section" style="display: none; margin-top: 1rem;">
+        <div class="responsive-grid grid-1-2" style="gap: 2rem;">
+
+            <!-- Threat Score Card -->
+            <div id="threat-score-card" class="glass-card"
+                style="padding: 2rem; display: flex; flex-direction: column; justify-content: center;">
+                <h3
+                    style="color: #fff; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                    Global Threat Index</h3>
+
+                <div style="text-align: center; margin: 1rem 0;">
+                    <div id="threat-score"
+                        style="font-size: 5rem; font-weight: 800; font-family: var(--font-mono); line-height: 1;">0
+                    </div>
+                    <div id="threat-status"
+                        style="font-size: 1.2rem; font-weight: 600; font-family: var(--font-mono); letter-spacing: 2px; margin-top: 0.5rem;">
+                        SECURE</div>
                 </div>
-                <div id="interface-status" class="wifi-status"></div>
-                <div id="interface-select-container" style="display: none; margin-top: 10px;">
-                    <select id="interface-select" class="wifi-input">
-                        <option value="">Select an interface...</option>
-                    </select>
+
+                <div class="threat-bar-container">
+                    <div id="threat-bar" class="threat-bar" style="width: 0%"></div>
                 </div>
+
+                <button id="export-csv-btn" class="btn"
+                    style="background: rgba(255,255,255,0.05); color: #fff; margin-top: 2rem; width: 100%;">EXPORT
+                    TELEMETRY (.CSV)</button>
             </div>
 
-            <!-- Step 2: Scan & Analyze -->
-            <div class="wifi-cracker-section" id="scan-section">
-                <h2>2. Scan & Analyze Wi-Fi Networks</h2>
-                <div class="wifi-controls">
-                    <button id="scan-button" class="wifi-button" disabled>
-                        <span id="scan-button-text">SCAN NETWORKS</span>
-                        <span class="loading" id="scan-spinner" style="display: none;"></span>
-                    </button>
-                </div>
-                <div id="scan-status" class="wifi-status"></div>
-            </div>
-
-            <!-- Step 3: Threat Analysis Results -->
-            <div class="wifi-cracker-section" id="threat-section" style="display: none;">
-                <h2>3. Threat Analysis</h2>
-                
-                <!-- Threat Score Card -->
-                <div id="threat-score-card" class="result-card">
-                    <div class="result-title">
-                        <h3>Threat Level</h3>
-                    </div>
-                    <div class="profile-info">
-                        <div class="threat-score-display">
-                            <div id="threat-score" class="threat-score">0</div>
-                            <div id="threat-status" class="threat-status">SAFE</div>
-                        </div>
-                        <div class="threat-bar-container">
-                            <div id="threat-bar" class="threat-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Issues List -->
-                <div id="issues-container" class="issues-container">
-                    <h3>Security Issues Detected</h3>
-                    <div id="issues-list"></div>
-                    
-                    <!-- Export Button -->
-                    <div style="margin-top: 20px; text-align: center;">
-                        <button id="export-csv-btn" class="action-button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                            <span>📊 Export to CSV</span>
-                        </button>
-                    </div>
+            <!-- Issues List -->
+            <div id="issues-container" class="glass-card" style="padding: 2rem;">
+                <h3
+                    style="color: var(--primary); margin-bottom: 1rem; border-bottom: 1px solid rgba(102, 252, 241, 0.2); padding-bottom: 0.5rem;">
+                    Detected Vulnerabilities</h3>
+                <div id="issues-list"
+                    style="display: flex; flex-direction: column; gap: 1rem; max-height: 500px; overflow-y: auto; padding-right: 1rem;">
                 </div>
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // DOM Elements
-            const listInterfacesBtn = document.getElementById('list-interfaces-btn');
-            const interfaceStatus = document.getElementById('interface-status');
-            const interfaceSelectContainer = document.getElementById('interface-select-container');
-            const interfaceSelect = document.getElementById('interface-select');
-            const scanButton = document.getElementById('scan-button');
-            const scanButtonText = document.getElementById('scan-button-text');
-            const scanSpinner = document.getElementById('scan-spinner');
-            const scanStatus = document.getElementById('scan-status');
-            const threatSection = document.getElementById('threat-section');
-            const threatScore = document.getElementById('threat-score');
-            const threatStatus = document.getElementById('threat-status');
-            const threatBar = document.getElementById('threat-bar');
-            const issuesList = document.getElementById('issues-list');
-            const exportCsvBtn = document.getElementById('export-csv-btn');
-            
-            // State variables
-            let isScanning = false;
-            let selectedInterface = '';
-            let currentIssues = []; // 儲存當前掃描結果
+{% block scripts %}
+<style>
+    .threat-bar-container {
+        width: 100%;
+        height: 10px;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+        overflow: hidden;
+    }
 
-            // List Network Interfaces
-            listInterfacesBtn.addEventListener('click', async function() {
-                listInterfacesBtn.disabled = true;
-                interfaceStatus.innerHTML = '<p>Loading network interfaces...</p>';
-                interfaceStatus.className = 'wifi-status info';
+    .threat-bar {
+        height: 100%;
+        transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease;
+    }
 
-                try {
-                    const response = await fetch('/WiFi/interface/details');
-                    const result = await response.json();
+    .threat-safe {
+        background: var(--success);
+        box-shadow: 0 0 15px rgba(46, 213, 115, 0.6);
+    }
 
-                    if (result.success && result.adapters.length > 0) {
-                        interfaceStatus.innerHTML = `<p>✅ Found ${result.adapters.length} network interface(s)</p>`;
-                        interfaceStatus.className = 'wifi-status success';
-                        
-                        // Populate interface dropdown
-                        interfaceSelect.innerHTML = '<option value="">Select an interface...</option>';
-                        result.adapters.forEach(adapter => {
-                            const option = document.createElement('option');
-                            option.value = adapter;
-                            option.textContent = adapter;
-                            interfaceSelect.appendChild(option);
-                        });
-                        
-                        interfaceSelectContainer.style.display = 'block';
-                        document.getElementById('interface-section').classList.add('completed');
-                    } else {
-                        interfaceStatus.innerHTML = '<p>❌ No network interfaces found</p>';
-                        interfaceStatus.className = 'wifi-status error';
-                    }
-                } catch (error) {
-                    interfaceStatus.innerHTML = `<p>❌ Error: ${error.message}</p>`;
-                    interfaceStatus.className = 'wifi-status error';
-                } finally {
-                    listInterfacesBtn.disabled = false;
-                }
-            });
+    .threat-warning {
+        background: var(--warning);
+        box-shadow: 0 0 15px rgba(255, 165, 2, 0.6);
+    }
 
-            // Handle Interface Selection
-            interfaceSelect.addEventListener('change', function() {
-                selectedInterface = this.value;
-                if (selectedInterface) {
-                    scanButton.disabled = false;
-                    scanStatus.innerHTML = `<p>Interface selected: ${selectedInterface}</p>`;
-                    scanStatus.className = 'wifi-status success';
-                } else {
-                    scanButton.disabled = true;
-                    scanStatus.innerHTML = '';
-                }
-            });
+    .threat-critical {
+        background: var(--danger);
+        box-shadow: 0 0 15px rgba(255, 71, 87, 0.6);
+    }
 
-            // Scan & Analyze Networks
-            scanButton.addEventListener('click', async function() {
-                if (isScanning || !selectedInterface) return;
+    .issue-item {
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 8px;
+        padding: 1rem;
+        border-left: 4px solid transparent;
+        font-family: var(--font-ui);
+    }
 
-                isScanning = true;
-                scanButtonText.textContent = 'SCANNING...';
-                scanSpinner.style.display = 'inline-block';
-                scanButton.disabled = true;
-                scanStatus.innerHTML = '<p>Scanning for networks and analyzing threats...</p>';
-                scanStatus.className = 'wifi-status info';
-                threatSection.style.display = 'none';
+    .issue-critical {
+        border-left-color: var(--danger);
+        background: linear-gradient(90deg, rgba(255, 71, 87, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%);
+    }
 
-                try {
-                    const response = await fetch('/WiFi/defense/scan', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            interface: selectedInterface,
-                            timeout: 10
-                        })
+    .issue-high {
+        border-left-color: #ff6348;
+    }
+
+    .issue-medium {
+        border-left-color: var(--warning);
+    }
+
+    .issue-low {
+        border-left-color: #70a1ff;
+    }
+
+    .issue-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .issue-type {
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: #fff;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .issue-risk {
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        font-family: var(--font-mono);
+    }
+
+    .risk-critical {
+        background: rgba(255, 71, 87, 0.2);
+        color: var(--danger);
+        border: 1px solid rgba(255, 71, 87, 0.5);
+    }
+
+    .risk-high {
+        background: rgba(255, 99, 72, 0.2);
+        color: #ff6348;
+        border: 1px solid rgba(255, 99, 72, 0.5);
+    }
+
+    .risk-medium {
+        background: rgba(255, 165, 2, 0.2);
+        color: var(--warning);
+        border: 1px solid rgba(255, 165, 2, 0.5);
+    }
+
+    .risk-low {
+        background: rgba(112, 161, 255, 0.2);
+        color: #70a1ff;
+        border: 1px solid rgba(112, 161, 255, 0.5);
+    }
+
+    .issue-detail {
+        color: #aaa;
+        margin: 4px 0;
+        font-size: 0.85rem;
+        font-family: var(--font-mono);
+    }
+
+    .issue-detail strong {
+        color: #fff;
+    }
+
+    .issue-recommendation {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px dashed rgba(255, 255, 255, 0.1);
+        color: var(--primary);
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+
+    .no-issues {
+        text-align: center;
+        padding: 3rem 0;
+        color: var(--success);
+        font-family: var(--font-mono);
+        font-style: italic;
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // DOM Elements
+        const listInterfacesBtn = document.getElementById('list-interfaces-btn');
+        const interfaceStatus = document.getElementById('interface-status');
+        const interfaceSelectContainer = document.getElementById('interface-select-container');
+        const interfaceSelect = document.getElementById('interface-select');
+        const scanButton = document.getElementById('scan-button');
+        const scanButtonText = document.getElementById('scan-button-text');
+        const scanSpinner = document.getElementById('scan-spinner');
+        const scanStatus = document.getElementById('scan-status');
+        const threatSection = document.getElementById('threat-section');
+        const threatScore = document.getElementById('threat-score');
+        const threatStatus = document.getElementById('threat-status');
+        const threatBar = document.getElementById('threat-bar');
+        const issuesList = document.getElementById('issues-list');
+        const exportCsvBtn = document.getElementById('export-csv-btn');
+
+        // State variables
+        let isScanning = false;
+        let selectedInterface = '';
+        let currentIssues = []; // 儲存當前掃描結果
+
+        // List Network Interfaces
+        listInterfacesBtn.addEventListener('click', async function () {
+            listInterfacesBtn.disabled = true;
+            interfaceStatus.innerHTML = '<span style="color:var(--text-muted)">POLLING KERNEL FOR NETWORK ADAPTERS...</span>';
+
+            try {
+                const response = await fetch('/WiFi/interface/details');
+                const result = await response.json();
+
+                if (result.success && result.adapters.length > 0) {
+                    interfaceStatus.innerHTML = `<span style="color:var(--success)">✅ FOUND ${result.adapters.length} WIRELESS INTERFACE(S)</span>`;
+
+                    // Populate interface dropdown
+                    interfaceSelect.innerHTML = '<option value="">-- SELECT AN INTERFACE --</option>';
+                    result.adapters.forEach(adapter => {
+                        const option = document.createElement('option');
+                        option.value = adapter;
+                        option.textContent = adapter.toUpperCase();
+                        interfaceSelect.appendChild(option);
                     });
 
-                    const result = await response.json();
-
-                    if (result.success) {
-                        scanStatus.innerHTML = '<p>✅ Scan complete!</p>';
-                        scanStatus.className = 'wifi-status success';
-                        document.getElementById('scan-section').classList.add('completed');
-                        
-                        // Display threat analysis
-                        displayThreatAnalysis(result);
-                    } else {
-                        throw new Error(result.message || 'Scan failed');
-                    }
-                } catch (error) {
-                    console.error('Error scanning networks:', error);
-                    scanStatus.innerHTML = `<p>❌ Error: ${error.message}</p>`;
-                    scanStatus.className = 'wifi-status error';
-                } finally {
-                    isScanning = false;
-                    scanButtonText.textContent = 'SCAN NETWORKS';
-                    scanSpinner.style.display = 'none';
-                    scanButton.disabled = false;
-                }
-            });
-
-            // Display Threat Analysis
-            function displayThreatAnalysis(result) {
-                const score = result.threat.score;
-                const status = result.threat.status;
-                const issues = result.issues || [];
-                
-                // 儲存當前掃描結果供 CSV 導出使用
-                currentIssues = issues;
-
-                // Update threat score
-                threatScore.textContent = score;
-                threatStatus.textContent = status;
-                
-                // Update threat bar
-                threatBar.style.width = score + '%';
-                
-                // Set color based on status
-                threatBar.className = 'threat-bar';
-                if (status === 'CRITICAL') {
-                    threatBar.classList.add('threat-critical');
-                    threatStatus.style.color = '#ff4757';
-                } else if (status === 'WARNING') {
-                    threatBar.classList.add('threat-warning');
-                    threatStatus.style.color = '#ffa502';
+                    interfaceSelectContainer.style.display = 'block';
                 } else {
-                    threatBar.classList.add('threat-safe');
-                    threatStatus.style.color = '#2ed573';
+                    interfaceStatus.innerHTML = '<span style="color:var(--danger)">❌ NO COMPATIBLE HARDWARE DETECTED</span>';
                 }
+            } catch (error) {
+                interfaceStatus.innerHTML = `<span style="color:var(--danger)">❌ I/O ERROR: ${error.message.toUpperCase()}</span>`;
+            } finally {
+                listInterfacesBtn.disabled = false;
+            }
+        });
 
-                // Display issues
-                if (issues.length === 0) {
-                    issuesList.innerHTML = '<div class="no-issues">✅ No security issues detected</div>';
+        // Handle Interface Selection
+        interfaceSelect.addEventListener('change', function () {
+            selectedInterface = this.value;
+            if (selectedInterface) {
+                scanButton.disabled = false;
+                scanStatus.innerHTML = `<span style="color:var(--success)">INTERFACE ${selectedInterface.toUpperCase()} BOUND AND READY</span>`;
+            } else {
+                scanButton.disabled = true;
+                scanStatus.innerHTML = '';
+            }
+        });
+
+        // Scan & Analyze Networks
+        scanButton.addEventListener('click', async function () {
+            if (isScanning || !selectedInterface) return;
+
+            isScanning = true;
+            scanButtonText.textContent = 'SWEEPING AIRSPACE...';
+            scanSpinner.style.display = 'inline-block';
+            scanButton.disabled = true;
+            scanStatus.innerHTML = '<span style="color:var(--primary)">EXECUTING 802.11 HEURISTIC ANALYSIS...</span>';
+            threatSection.style.display = 'none';
+
+            try {
+                const response = await fetch('/WiFi/defense/scan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        interface: selectedInterface,
+                        timeout: 10
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    scanStatus.innerHTML = '<span style="color:var(--success)">✅ SWEEP COMPLETED</span>';
+                    // Display threat analysis
+                    displayThreatAnalysis(result);
                 } else {
-                    issuesList.innerHTML = '';
-                    issues.forEach((issue, index) => {
-                        const issueElement = document.createElement('div');
-                        issueElement.className = 'issue-item issue-' + issue.risk.toLowerCase();
-                        
-                        let issueContent = `
+                    throw new Error(result.message || 'Scan telemetry failure');
+                }
+            } catch (error) {
+                console.error('Error scanning networks:', error);
+                scanStatus.innerHTML = `<span style="color:var(--danger)">❌ ERROR: ${error.message.toUpperCase()}</span>`;
+            } finally {
+                isScanning = false;
+                scanButtonText.textContent = 'INITIATE SWEEP';
+                scanSpinner.style.display = 'none';
+                scanButton.disabled = false;
+            }
+        });
+
+        // Display Threat Analysis
+        function displayThreatAnalysis(result) {
+            const score = result.threat.score;
+            const status = result.threat.status;
+            const issues = result.issues || [];
+
+            currentIssues = issues;
+
+            // Update threat score
+            threatScore.textContent = score;
+            threatStatus.textContent = status;
+
+            // Update threat bar
+            threatBar.style.width = score + '%';
+
+            // Set color based on status
+            threatBar.className = 'threat-bar';
+            if (status === 'CRITICAL') {
+                threatBar.classList.add('threat-critical');
+                threatStatus.style.color = 'var(--danger)';
+                threatScore.style.color = 'var(--danger)';
+            } else if (status === 'WARNING') {
+                threatBar.classList.add('threat-warning');
+                threatStatus.style.color = 'var(--warning)';
+                threatScore.style.color = 'var(--warning)';
+            } else {
+                threatBar.classList.add('threat-safe');
+                threatStatus.style.color = 'var(--success)';
+                threatScore.style.color = 'var(--success)';
+            }
+
+            // Display issues
+            if (issues.length === 0) {
+                issuesList.innerHTML = '<div class="no-issues">AIRSPACE SECURE. NO VULNERABLE ACCESS POINTS DETECTED.</div>';
+            } else {
+                issuesList.innerHTML = '';
+                issues.forEach((issue, index) => {
+                    const issueElement = document.createElement('div');
+                    issueElement.className = 'issue-item issue-' + issue.risk.toLowerCase();
+
+                    let issueContent = `
                             <div class="issue-header">
                                 <span class="issue-type">${formatIssueType(issue.type)}</span>
                                 <span class="issue-risk risk-${issue.risk.toLowerCase()}">${issue.risk}</span>
                             </div>
                         `;
 
-                        if (issue.ssid) {
-                            issueContent += `<div class="issue-detail"><strong>SSID:</strong> ${issue.ssid}</div>`;
-                        }
+                    if (issue.ssid) {
+                        issueContent += `<div class="issue-detail"><strong>SSID:</strong> ${issue.ssid}</div>`;
+                    }
 
-                        if (issue.bssid) {
-                            issueContent += `<div class="issue-detail"><strong>BSSID:</strong> ${issue.bssid}</div>`;
-                        }
+                    if (issue.bssid) {
+                        issueContent += `<div class="issue-detail"><strong>BSSID:</strong> ${issue.bssid}</div>`;
+                    }
 
-                        // 顯示訊號資訊
-                        if (issue.signal && issue.signal !== 'N/A') {
-                            const signalQuality = issue.signal_quality || 'N/A';
-                            issueContent += `<div class="issue-detail"><strong>Signal:</strong> ${issue.signal} dBm (${signalQuality})</div>`;
-                        }
+                    // 顯示訊號資訊
+                    if (issue.signal && issue.signal !== 'N/A') {
+                        const signalQuality = issue.signal_quality || 'N/A';
+                        issueContent += `<div class="issue-detail"><strong>SIGNAL:</strong> ${issue.signal} dBm (${signalQuality})</div>`;
+                    }
 
-                        // 顯示頻道和頻段資訊
-                        if (issue.channel && issue.channel !== 'N/A') {
-                            const band = issue.band || 'N/A';
-                            const freq = issue.frequency || '';
-                            issueContent += `<div class="issue-detail"><strong>Channel:</strong> ${issue.channel} (${band}${freq ? ', ' + freq : ''})</div>`;
-                        }
+                    // 顯示頻道和頻段資訊
+                    if (issue.channel && issue.channel !== 'N/A') {
+                        const band = issue.band || 'N/A';
+                        const freq = issue.frequency || '';
+                        issueContent += `<div class="issue-detail"><strong>CHANNEL:</strong> ${issue.channel} (${band}${freq ? ', ' + freq : ''})</div>`;
+                    }
 
-                        // 顯示加密資訊
-                        if (issue.encryption) {
-                            issueContent += `<div class="issue-detail"><strong>Encryption:</strong> ${issue.encryption}</div>`;
-                        }
+                    // 顯示加密資訊
+                    if (issue.encryption) {
+                        issueContent += `<div class="issue-detail"><strong>ENCRYPTION:</strong> ${issue.encryption}</div>`;
+                    }
 
-                        // Evil Twin 的特殊顯示
-                        if (issue.bssids && issue.bssids.length > 0) {
-                            issueContent += `<div class="issue-detail"><strong>Detected ${issue.count} APs:</strong></div>`;
-                            if (issue.ap_details) {
-                                issue.ap_details.forEach((ap, idx) => {
-                                    issueContent += `
-                                        <div class="issue-detail" style="margin-left: 20px; font-size: 0.9em;">
-                                            ${idx + 1}. ${ap.bssid}<br>
-                                            &nbsp;&nbsp;&nbsp;Signal: ${ap.signal} dBm | Ch: ${ap.channel} | ${ap.encryption}
+                    // Evil Twin 的特殊顯示
+                    if (issue.bssids && issue.bssids.length > 0) {
+                        issueContent += `<div class="issue-detail" style="margin-top: 0.5rem; color: var(--danger);"><strong>DETECTED ${issue.count} ROGUE APs:</strong></div>`;
+                        if (issue.ap_details) {
+                            issue.ap_details.forEach((ap, idx) => {
+                                issueContent += `
+                                        <div class="issue-detail" style="margin-left: 1rem; opacity: 0.8;">
+                                            ${idx + 1}. ${ap.bssid} (Sig: ${ap.signal}dBm | Ch: ${ap.channel} | ${ap.encryption})
                                         </div>
                                     `;
-                                });
-                            } else {
-                                issueContent += `<div class="issue-detail"><strong>BSSIDs:</strong> ${issue.bssids.join(', ')}</div>`;
-                            }
+                            });
+                        } else {
+                            issueContent += `<div class="issue-detail"><strong>BSSIDs:</strong> ${issue.bssids.join(', ')}</div>`;
                         }
-
-                        issueContent += `<div class="issue-recommendation">💡 ${issue.recommendation}</div>`;
-
-                        issueElement.innerHTML = issueContent;
-                        issuesList.appendChild(issueElement);
-                    });
-                }
-
-                // Show threat section
-                threatSection.style.display = 'block';
-            }
-
-            // Format issue type for display
-            function formatIssueType(type) {
-                return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-            }
-
-            // Export to CSV (純前端實現)
-            exportCsvBtn.addEventListener('click', function() {
-                if (!currentIssues || currentIssues.length === 0) {
-                    alert('No data to export. Please run a scan first.');
-                    return;
-                }
-
-                // 準備 CSV 標題
-                const headers = [
-                    'Issue Type',
-                    'Risk Level',
-                    'SSID',
-                    'BSSID',
-                    'Signal (dBm)',
-                    'Signal Quality',
-                    'Channel',
-                    'Band',
-                    'Frequency',
-                    'Encryption',
-                    'Recommendation'
-                ];
-
-                // 準備 CSV 數據行
-                const rows = currentIssues.map(issue => {
-                    // 處理 Evil Twin 的特殊情況
-                    if (issue.type === 'EVIL_TWIN' && issue.ap_details) {
-                        // 為每個 AP 創建一行
-                        return issue.ap_details.map(ap => [
-                            formatIssueType(issue.type),
-                            issue.risk,
-                            issue.ssid || '',
-                            ap.bssid || '',
-                            ap.signal || 'N/A',
-                            'N/A',
-                            ap.channel || 'N/A',
-                            'N/A',
-                            'N/A',
-                            ap.encryption || 'N/A',
-                            issue.recommendation
-                        ]).join('\n');
-                    } else {
-                        // 一般情況
-                        return [
-                            formatIssueType(issue.type),
-                            issue.risk,
-                            issue.ssid || '',
-                            issue.bssid || '',
-                            issue.signal || 'N/A',
-                            issue.signal_quality || 'N/A',
-                            issue.channel || 'N/A',
-                            issue.band || 'N/A',
-                            issue.frequency || 'N/A',
-                            issue.encryption || 'N/A',
-                            issue.recommendation
-                        ].map(escapeCSV).join(',');
                     }
+
+                    issueContent += `<div class="issue-recommendation">ACTION: ${issue.recommendation}</div>`;
+
+                    issueElement.innerHTML = issueContent;
+                    issuesList.appendChild(issueElement);
                 });
+            }
 
-                // 組合 CSV 內容
-                const csvContent = [
-                    headers.map(escapeCSV).join(','),
-                    ...rows
-                ].join('\n');
+            // Show threat section
+            threatSection.style.display = 'block';
+        }
 
-                // 創建 Blob 並觸發下載
-                const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                
-                // 生成檔名（包含時間戳）
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-                const filename = `wifi_defense_scan_${timestamp}.csv`;
-                
-                link.setAttribute('href', url);
-                link.setAttribute('download', filename);
-                link.style.visibility = 'hidden';
-                
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                // 釋放 URL 對象
-                URL.revokeObjectURL(url);
+        // Format issue type for display
+        function formatIssueType(type) {
+            return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        // Export to CSV
+        exportCsvBtn.addEventListener('click', function () {
+            if (!currentIssues || currentIssues.length === 0) {
+                alert('No data to export. Please run a scan first.');
+                return;
+            }
+
+            const headers = [
+                'Issue Type', 'Risk Level', 'SSID', 'BSSID', 'Signal (dBm)',
+                'Signal Quality', 'Channel', 'Band', 'Frequency', 'Encryption', 'Recommendation'
+            ];
+
+            const rows = currentIssues.map(issue => {
+                if (issue.type === 'EVIL_TWIN' && issue.ap_details) {
+                    return issue.ap_details.map(ap => [
+                        formatIssueType(issue.type), issue.risk, issue.ssid || '', ap.bssid || '',
+                        ap.signal || 'N/A', 'N/A', ap.channel || 'N/A', 'N/A', 'N/A',
+                        ap.encryption || 'N/A', issue.recommendation
+                    ]).join('\n');
+                } else {
+                    return [
+                        formatIssueType(issue.type), issue.risk, issue.ssid || '', issue.bssid || '',
+                        issue.signal || 'N/A', issue.signal_quality || 'N/A', issue.channel || 'N/A',
+                        issue.band || 'N/A', issue.frequency || 'N/A', issue.encryption || 'N/A',
+                        issue.recommendation
+                    ].map(escapeCSV).join(',');
+                }
             });
 
-            // CSV 轉義函數（處理逗號、引號、換行等特殊字符）
-            function escapeCSV(str) {
-                if (str === null || str === undefined) return '';
-                str = String(str);
-                // 如果包含逗號、引號或換行，用引號包裹並轉義內部引號
-                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                    return '"' + str.replace(/"/g, '""') + '"';
-                }
-                return str;
-            }
+            const csvContent = [headers.map(escapeCSV).join(','), ...rows].join('\n');
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `wifi_defense_scan_${timestamp}.csv`;
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         });
-    </script>
-</body>
-</html>
+
+        function escapeCSV(str) {
+            if (str === null || str === undefined) return '';
+            str = String(str);
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return '"' + str.replace(/"/g, '""') + '"';
+            }
+            return str;
+        }
+    });
+</script>
+{% endblock %}

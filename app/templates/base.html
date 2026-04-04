@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HackMaster Pi{% endblock %}</title>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <!-- Base Styles -->
+    <style>
+        :root {
+            /* Define incredible cyberpunk / dark SaaS variables */
+            --bg-color: #050505;
+            --surface: rgba(20, 20, 25, 0.65);
+            --surface-glass: rgba(25, 25, 30, 0.45);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(102, 252, 241, 0.3);
+            --primary: #66fcf1;
+            --primary-hover: #45a29e;
+            --text-main: #f0f0f0;
+            --text-muted: #8c9096;
+            --danger: #ff4757;
+            --success: #2ed573;
+            --warning: #ffa502;
+            --font-ui: 'Inter', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --sidebar-width: 280px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Ambient Background Orbs */
+        .ambient-bg {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(circle at 15% 50%, rgba(69, 162, 158, 0.09) 0%, transparent 40%),
+                radial-gradient(circle at 85% 30%, rgba(102, 252, 241, 0.06) 0%, transparent 40%);
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 50;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 2rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(102, 252, 241, 0.4);
+        }
+
+        .close-sidebar {
+            display: none;
+            font-size: 1.5rem;
+        }
+
+        .nav-links {
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            overflow-y: auto;
+        }
+
+        .nav-links::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .nav-links::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .nav-item {
+            padding: 0.875rem 1.25rem;
+            border-radius: 12px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(102, 252, 241, 0.1);
+            color: var(--primary);
+            box-shadow: inset 0 0 0 1px var(--border-glow);
+        }
+
+        .nav-category {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255, 255, 255, 0.25);
+            margin: 1.5rem 0 0.5rem 1.25rem;
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 3.5rem 4rem;
+            min-height: 100vh;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        .page-header {
+            margin-bottom: 3.5rem;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .page-title {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+
+        .page-subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 650px;
+            line-height: 1.6;
+        }
+
+        /* Common UI Components */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.75rem;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .glass-card {
+            background: var(--surface-glass);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        }
+
+        .glass-card:hover {
+            border-color: var(--border-glow);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4), 0 0 20px 0 rgba(102, 252, 241, 0.15);
+            transform: translateY(-4px);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Form Elements */
+        .form-section {
+            background: var(--surface-glass);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .form-section h3 {
+            font-size: 1.2rem;
+            color: #fff;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .form-group {
+            margin-bottom: 1.75rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .styled-input,
+        .styled-select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            color: #fff;
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .styled-input:focus,
+        .styled-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 252, 241, 0.15);
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        .styled-select option {
+            background: var(--bg-color);
+            color: #fff;
+        }
+
+        /* Aesthetic Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.75rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-family: var(--font-ui);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: rgba(102, 252, 241, 0.08);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary);
+            color: var(--bg-color);
+            box-shadow: 0 0 20px rgba(102, 252, 241, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: rgba(255, 71, 87, 0.08);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: var(--danger);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: rgba(46, 213, 115, 0.08);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: var(--success);
+            color: #111;
+            box-shadow: 0 0 20px rgba(46, 213, 115, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        /* Utilities */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.4);
+            font-weight: 500;
+        }
+
+        .status-badge.running {
+            border-color: rgba(46, 213, 115, 0.3);
+            color: var(--success);
+            background: rgba(46, 213, 115, 0.05);
+        }
+
+        .status-badge.stopped {
+            border-color: rgba(255, 71, 87, 0.3);
+            color: var(--danger);
+            background: rgba(255, 71, 87, 0.05);
+        }
+
+        .status-badge.info {
+            border-color: var(--border-glow);
+            color: var(--primary);
+            background: rgba(102, 252, 241, 0.05);
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        /* Responsive Layout Classes */
+        .responsive-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .grid-1-2 {
+            grid-template-columns: 1fr 2fr;
+        }
+
+        .grid-2-1 {
+            grid-template-columns: 2fr 1fr;
+        }
+
+        .grid-3-2 {
+            grid-template-columns: 3fr 2fr;
+        }
+
+        .grid-1-1 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .flex-desktop {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Media Queries */
+        .mobile-nav-toggle {
+            display: none;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .close-sidebar {
+                display: block;
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 2rem 1.25rem;
+            }
+
+            .mobile-nav-toggle {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                margin-bottom: 1.5rem;
+                padding: 0.75rem 1.25rem;
+                background: var(--surface-glass);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                color: var(--primary);
+                font-weight: 600;
+                cursor: pointer;
+                backdrop-filter: blur(10px);
+            }
+
+            .responsive-grid.grid-1-2,
+            .responsive-grid.grid-2-1,
+            .responsive-grid.grid-3-2,
+            .responsive-grid.grid-1-1 {
+                grid-template-columns: 1fr !important;
+            }
+
+            .responsive-grid.grid-4 {
+                grid-template-columns: 1fr 1fr !important;
+            }
+
+            .flex-desktop {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+
+            .page-title {
+                font-size: 1.75rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .responsive-grid.grid-4 {
+                grid-template-columns: 1fr !important;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        /* Specialized UI for lists/tables */
+        .data-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .data-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .data-item:hover {
+            border-color: rgba(102, 252, 241, 0.4);
+            background: rgba(25, 25, 30, 0.8);
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    <div class="ambient-bg"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1>HACKMASTER PI</h1>
+                <span class="close-sidebar"
+                    onclick="document.getElementById('sidebar').classList.remove('show')">×</span>
+            </div>
+        </div>
+        <nav class="nav-links">
+            <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+                Dashboard
+            </a>
+
+            <div class="nav-category">Bluetooth Low Energy</div>
+            <a href="/BLE/beacon-scanner"
+                class="nav-item {% if 'beacon-scanner' in request.path %}active{% endif %}">Beacon Scanner</a>
+            <a href="/BLE/beacon-emulator"
+                class="nav-item {% if 'beacon-emulator' in request.path %}active{% endif %}">Beacon Emulator</a>
+            <a href="/BLE/airpods-emulator"
+                class="nav-item {% if 'airpods-emulator' in request.path %}active{% endif %}">AirPods Emulator</a>
+            <a href="/BLE/beacon-storage"
+                class="nav-item {% if 'beacon-storage' in request.path %}active{% endif %}">Beacon Profiles</a>
+
+            <div class="nav-category">Wi-Fi Tools</div>
+            <a href="/WiFi/wifi-scanner" class="nav-item {% if 'wifi-scanner' in request.path %}active{% endif %}">Wi-Fi
+                Scanner</a>
+            <a href="/WiFi/wifi-cracker"
+                class="nav-item {% if 'wifi-cracker' in request.path %}active{% endif %}">Password Cracker</a>
+            <a href="/WiFi/ap-emulator" class="nav-item {% if 'ap-emulator' in request.path %}active{% endif %}">AP
+                Emulator</a>
+            <a href="/WiFi/wordlist-generator"
+                class="nav-item {% if 'wordlist-generator' in request.path %}active{% endif %}">Wordlist Gen</a>
+
+            <div class="nav-category">RFID / NFC</div>
+            <a href="/RFID/identify-rfid"
+                class="nav-item {% if 'identify-rfid' in request.path %}active{% endif %}">Identify Card</a>
+            <a href="/RFID/write-uid" class="nav-item {% if 'write-uid' in request.path %}active{% endif %}">Write
+                UID</a>
+
+            <div class="nav-category">Infrared</div>
+            <a href="/IR/signal-learner" class="nav-item {% if 'signal-learner' in request.path %}active{% endif %}">IR
+                Learner</a>
+            <a href="/IR/signal-enumerator"
+                class="nav-item {% if 'signal-enumerator' in request.path %}active{% endif %}">IR Enumerator</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="mobile-nav-toggle" id="mobileNavBtn"
+            onclick="document.getElementById('sidebar').classList.add('show')">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <span>MENU</span>
+        </div>
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // Use path detection to set active class properly
+        document.addEventListener('DOMContentLoaded', () => {
+            const path = window.location.pathname;
+            document.querySelectorAll('.nav-item').forEach(item => {
+                if (item.getAttribute('href') === path) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>
