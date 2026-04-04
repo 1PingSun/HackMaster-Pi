@@ -20,7 +20,7 @@ HackMaster Pi is an open-source IoT security testing tool based on the Raspberry
       <img src="https://github.com/user-attachments/assets/ffae2534-9ca6-4bd0-9e48-4145b4bb6576">
     </td>
     <td style="text-align: center;">
-      <img src="https://github.com/user-attachments/assets/6cf68495-7150-40ba-9795-33b71d7cc836">
+      <img src="https://github.com/user-attachments/assets/8ebb73b0-f69c-46f9-8dc3-7d9ad02592f2">
     </td>
   </tr>
 </table>
