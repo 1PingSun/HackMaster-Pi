@@ -1,104 +1,200 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-    <title>Beacon Scanner - HackMaster Pi</title>
-    <meta name="theme-color" content="#0f0f17">
-</head>
-<body>
-    <div class="container">
-        <div class="header-container">
-            <a href="/" class="back-button">← BACK</a>
-            <h1>BEACON SCANNER</h1>
-        </div>
+{% extends "base.html" %}
 
-        <div class="controls">
-            <button id="scan-button">SCAN BEACONS</button>
-            <div class="scanner-status">
+{% block title %}Beacon Scanner - HackMaster Pi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">BLE Beacon Scanner</h2>
+    <p class="page-subtitle">Continuously scan the area for Bluetooth Low Energy transmission and map active beacons in
+        real-time.</p>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: 1fr;">
+    <div class="glass-card"
+        style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 1.5rem 2.5rem; gap: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+            <button class="btn btn-primary" id="scan-button" style="padding: 1rem 2rem;">SCAN BEACONS</button>
+            <div class="status-badge" style="background: rgba(0,0,0,0.5); font-size: 1rem;">
                 <span id="status-text">READY</span>
-                <span id="loading-spinner" class="loading hidden"></span>
+                <span id="loading-spinner" class="spinner hidden" style="margin-left: 10px;"></span>
             </div>
         </div>
-
-        <div class="filter-container">
-            <input type="text" id="filter-input" class="filter-input" placeholder="FILTER BY UUID OR NAME...">
-        </div>
-
-        <div class="beacon-list" id="beacon-list">
-            <div class="no-beacons">NO BEACONS DETECTED</div>
+        <div style="min-width: 320px;">
+            <input type="text" id="filter-input" class="styled-input" placeholder="FILTER BY UUID OR NAME...">
         </div>
     </div>
+</div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const scanButton = document.getElementById('scan-button');
-            const statusText = document.getElementById('status-text');
-            const loadingSpinner = document.getElementById('loading-spinner');
-            const beaconList = document.getElementById('beacon-list');
-            const filterInput = document.getElementById('filter-input');
-            
-            let beacons = [];
-            let scanning = false;
-            let scanInterval = null;
-            
-            // 點擊掃描按鈕
-            scanButton.addEventListener('click', function() {
-                if (scanning) {
-                    stopScanning();
-                } else {
-                    startScanning();
-                }
-            });
-            
-            // 過濾輸入框
-            filterInput.addEventListener('input', function() {
-                filterBeacons(this.value.trim().toLowerCase());
-            });
-            
-            // 開始掃描
-            function startScanning() {
-                scanning = true;
-                scanButton.textContent = 'STOP SCAN';
-                scanButton.classList.add('stop');
-                statusText.textContent = 'SCANNING...';
-                loadingSpinner.classList.remove('hidden');
-                
-                // 先進行一次掃描
-                scanBeacons();
-                
-                // 設定定時掃描 (每 5 秒)
-                scanInterval = setInterval(scanBeacons, 5000);
+<div class="form-section">
+    <h3>Detected Beacons</h3>
+    <div class="data-list" id="beacon-list">
+        <div class="data-item"
+            style="justify-content: center; color: var(--text-muted); font-style: italic; font-weight: 500;">
+            PRESS SCAN TO BEGIN
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    .hidden {
+        display: none !important;
+    }
+
+    .beacon-item {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .beacon-item:hover {
+        border-color: rgba(102, 252, 241, 0.4);
+        background: rgba(25, 25, 30, 0.8);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .uuid-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .beacon-uuid {
+        font-family: var(--font-mono);
+        color: var(--primary);
+        font-size: 1.1rem;
+        letter-spacing: 0.5px;
+    }
+
+    .copy-btn {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--border);
+        color: #fff;
+        padding: 0.4rem 1rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .copy-btn:hover {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #000;
+    }
+
+    .beacon-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.95rem;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .beacon-rssi {
+        padding: 0.3rem 0.8rem;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.5);
+        font-family: var(--font-mono);
+    }
+
+    .beacon-rssi.strong {
+        color: var(--success);
+        border: 1px solid rgba(46, 213, 115, 0.3);
+    }
+
+    .beacon-rssi.medium {
+        color: var(--warning);
+        border: 1px solid rgba(255, 165, 2, 0.3);
+    }
+
+    .beacon-rssi.weak {
+        color: var(--danger);
+        border: 1px solid rgba(255, 71, 87, 0.3);
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const scanButton = document.getElementById('scan-button');
+        const statusText = document.getElementById('status-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const beaconList = document.getElementById('beacon-list');
+        const filterInput = document.getElementById('filter-input');
+
+        let beacons = [];
+        let scanning = false;
+        let scanInterval = null;
+
+        // 點擊掃描按鈕
+        scanButton.addEventListener('click', function () {
+            if (scanning) {
+                stopScanning();
+            } else {
+                startScanning();
             }
-            
-            // 停止掃描
-            function stopScanning() {
-                scanning = false;
-                scanButton.textContent = 'SCAN BEACONS';
-                scanButton.classList.remove('stop');
-                statusText.textContent = 'READY';
-                loadingSpinner.classList.add('hidden');
-                
-                // 清除定時掃描
-                if (scanInterval) {
-                    clearInterval(scanInterval);
-                    scanInterval = null;
-                }
+        });
+
+        // 過濾輸入框
+        filterInput.addEventListener('input', function () {
+            filterBeacons(this.value.trim().toLowerCase());
+        });
+
+        // 開始掃描
+        function startScanning() {
+            scanning = true;
+            scanButton.textContent = 'STOP SCAN';
+            scanButton.classList.remove('btn-primary');
+            scanButton.classList.add('btn-danger', 'stop');
+            statusText.textContent = 'SCANNING...';
+            statusText.style.color = 'var(--primary)';
+            loadingSpinner.classList.remove('hidden');
+
+            // 先進行一次掃描
+            scanBeacons();
+
+            // 設定定時掃描 (每 5 秒)
+            scanInterval = setInterval(scanBeacons, 5000);
+        }
+
+        // 停止掃描
+        function stopScanning() {
+            scanning = false;
+            scanButton.textContent = 'SCAN BEACONS';
+            scanButton.classList.remove('btn-danger', 'stop');
+            scanButton.classList.add('btn-primary');
+            statusText.textContent = 'READY';
+            statusText.style.color = '';
+            loadingSpinner.classList.add('hidden');
+
+            // 清除定時掃描
+            if (scanInterval) {
+                clearInterval(scanInterval);
+                scanInterval = null;
             }
-            
-            // 掃描 Beacon
-            function scanBeacons() {
-                fetch('/BLE/beacon-scanner/scan', {
-                    method: 'GET'
-                })
+        }
+
+        // 掃描 Beacon
+        function scanBeacons() {
+            fetch('/BLE/beacon-scanner/scan', {
+                method: 'GET'
+            })
                 .then(response => response.json())
                 .then(data => {
                     console.log('Scanner response:', data);
                     if (data.beacons && Array.isArray(data.beacons)) {
                         beacons = data.beacons;
                         renderBeaconList(beacons);
-                        
+
                         // 如果有過濾條件，重新應用過濾
                         const filterValue = filterInput.value.trim().toLowerCase();
                         if (filterValue) {
@@ -109,99 +205,103 @@
                 .catch(error => {
                     console.error('Error scanning beacons:', error);
                     statusText.textContent = 'ERROR';
+                    statusText.style.color = 'var(--danger)';
                     stopScanning();
                 });
+        }
+
+        // 渲染 Beacon 列表
+        function renderBeaconList(beacons) {
+            // 清空列表
+            beaconList.innerHTML = '';
+
+            if (beacons.length === 0) {
+                beaconList.innerHTML = '<div class="data-item" style="justify-content: center; color: var(--text-muted); font-style: italic;">NO BEACONS DETECTED</div>';
+                return;
             }
-            
-            // 渲染 Beacon 列表
-            function renderBeaconList(beacons) {
-                // 清空列表
-                beaconList.innerHTML = '';
-                
-                if (beacons.length === 0) {
-                    beaconList.innerHTML = '<div class="no-beacons">NO BEACONS DETECTED</div>';
-                    return;
+
+            // 按 RSSI 強度排序 (信號強度由高到低)
+            beacons.sort((a, b) => b.rssi - a.rssi);
+
+            // 為每個 beacon 創建列表項
+            beacons.forEach(beacon => {
+                const item = document.createElement('div');
+                item.className = 'beacon-item data-item'; // Added data-item
+                // override flex-direction for list item layout integration
+                item.style.flexDirection = 'column';
+                item.style.alignItems = 'stretch';
+                item.style.padding = '1.5rem';
+
+                // 決定 RSSI 的 CSS 類別
+                let rssiClass = 'weak';
+                if (beacon.rssi > -60) {
+                    rssiClass = 'strong';
+                } else if (beacon.rssi > -80) {
+                    rssiClass = 'medium';
                 }
-                
-                // 按 RSSI 強度排序 (信號強度由高到低)
-                beacons.sort((a, b) => b.rssi - a.rssi);
-                
-                // 為每個 beacon 創建列表項
-                beacons.forEach(beacon => {
-                    const item = document.createElement('div');
-                    item.className = 'beacon-item';
-                    
-                    // 決定 RSSI 的 CSS 類別
-                    let rssiClass = 'weak';
-                    if (beacon.rssi > -60) {
-                        rssiClass = 'strong';
-                    } else if (beacon.rssi > -80) {
-                        rssiClass = 'medium';
-                    }
-                    
-                    // 創建 UUID 容器以便包含複製按鈕
-                    const uuidContainer = document.createElement('div');
-                    uuidContainer.className = 'uuid-container';
-                    
-                    const uuidSpan = document.createElement('span');
-                    uuidSpan.className = 'beacon-uuid';
-                    uuidSpan.textContent = beacon.uuid || 'Unknown UUID';
-                    
-                    const copyBtn = document.createElement('button');
-                    copyBtn.className = 'copy-btn';
-                    copyBtn.textContent = 'COPY';
-                    copyBtn.onclick = function() {
-                        navigator.clipboard.writeText(beacon.uuid).then(() => {
-                            copyBtn.textContent = 'COPIED!';
-                            setTimeout(() => {
-                                copyBtn.textContent = 'COPY';
-                            }, 2000);
-                        });
-                    };
-                    
-                    uuidContainer.appendChild(uuidSpan);
-                    uuidContainer.appendChild(copyBtn);
-                    
-                    // 其他詳細信息
-                    const details = document.createElement('div');
-                    details.className = 'beacon-details';
-                    
-                    const nameSpan = document.createElement('span');
-                    nameSpan.textContent = `Name: ${beacon.name || 'Unknown'}`;
-                    
-                    const rssiSpan = document.createElement('span');
-                    rssiSpan.className = `beacon-rssi ${rssiClass}`;
-                    rssiSpan.textContent = `RSSI: ${beacon.rssi} dBm`;
-                    
-                    details.appendChild(nameSpan);
-                    details.appendChild(rssiSpan);
-                    
-                    // 組合所有元素
-                    item.appendChild(uuidContainer);
-                    item.appendChild(details);
-                    beaconList.appendChild(item);
-                });
+
+                // 創建 UUID 容器以便包含複製按鈕
+                const uuidContainer = document.createElement('div');
+                uuidContainer.className = 'uuid-container';
+
+                const uuidSpan = document.createElement('span');
+                uuidSpan.className = 'beacon-uuid';
+                uuidSpan.textContent = beacon.uuid || 'Unknown UUID';
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-btn';
+                copyBtn.textContent = 'COPY';
+                copyBtn.onclick = function () {
+                    navigator.clipboard.writeText(beacon.uuid).then(() => {
+                        copyBtn.textContent = 'COPIED!';
+                        setTimeout(() => {
+                            copyBtn.textContent = 'COPY';
+                        }, 2000);
+                    });
+                };
+
+                uuidContainer.appendChild(uuidSpan);
+                uuidContainer.appendChild(copyBtn);
+
+                // 其他詳細信息
+                const details = document.createElement('div');
+                details.className = 'beacon-details';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = `Name: ${beacon.name || 'Unknown'}`;
+
+                const rssiSpan = document.createElement('span');
+                rssiSpan.className = `beacon-rssi ${rssiClass}`;
+                rssiSpan.textContent = `RSSI: ${beacon.rssi} dBm`;
+
+                details.appendChild(nameSpan);
+                details.appendChild(rssiSpan);
+
+                // 組合所有元素
+                item.appendChild(uuidContainer);
+                item.appendChild(details);
+                beaconList.appendChild(item);
+            });
+        }
+
+        // 過濾 Beacons
+        function filterBeacons(filterText) {
+            if (!filterText) {
+                renderBeaconList(beacons);
+                return;
             }
-            
-            // 過濾 Beacons
-            function filterBeacons(filterText) {
-                if (!filterText) {
-                    renderBeaconList(beacons);
-                    return;
-                }
-                
-                const filtered = beacons.filter(beacon => {
-                    const uuid = (beacon.uuid || '').toLowerCase();
-                    const name = (beacon.name || '').toLowerCase();
-                    return uuid.includes(filterText) || name.includes(filterText);
-                });
-                
-                renderBeaconList(filtered);
-            }
-            
-            // 初始顯示
-            beaconList.innerHTML = '<div class="no-beacons">PRESS SCAN TO BEGIN</div>';
-        });
-    </script>
-</body>
-</html>
+
+            const filtered = beacons.filter(beacon => {
+                const uuid = (beacon.uuid || '').toLowerCase();
+                const name = (beacon.name || '').toLowerCase();
+                return uuid.includes(filterText) || name.includes(filterText);
+            });
+
+            renderBeaconList(filtered);
+        }
+
+        // 初始顯示
+        beaconList.innerHTML = '<div class="data-item" style="justify-content: center; color: var(--text-muted); font-style: italic;">PRESS SCAN TO BEGIN</div>';
+    });
+</script>
+{% endblock %}

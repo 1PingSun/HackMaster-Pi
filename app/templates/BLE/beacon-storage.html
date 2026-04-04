@@ -1,69 +1,158 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Beacon Storage - HackMaster Pi</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-    <meta name="theme-color" content="#0f0f17">
-</head>
-<body>
-    <div class="container">
-        <div class="header-container">
-            <a href="/" class="back-button">← BACK</a>
-            <h1>BEACON STORAGE</h1>
-        </div>
-        
-        <div class="form-group profile-form">
-            <h2>ADD NEW PROFILE</h2>
-            <form id="profileForm">
-                <div class="input-group">
-                    <label for="name">Profile Name:</label>
-                    <input type="text" id="name" name="name" required placeholder="Enter profile name">
-                </div>
-                <div class="input-group">
-                    <label for="uuid">UUID:</label>
-                    <input type="text" id="uuid" name="uuid" required placeholder="e.g. AA 21 98 B2 46 30 11 EE BE 56 02 42 AC 12 00 02">
-                </div>
-                <div class="input-group">
-                    <label for="major">Major:</label>
-                    <input type="text" id="major" name="major" required placeholder="e.g. 00 01">
-                </div>
-                <div class="input-group">
-                    <label for="minor">Minor:</label>
-                    <input type="text" id="minor" name="minor" required placeholder="e.g. 00 02">
-                </div>
-                <div class="input-group">
-                    <label for="power">Power:</label>
-                    <input type="text" id="power" name="power" required placeholder="e.g. C8">
-                </div>
-                <button type="submit" class="add-btn">ADD PROFILE</button>
-            </form>
-        </div>
+{% extends "base.html" %}
 
-        <div class="profile-list" id="profileList">
-            <h2>SAVED PROFILES</h2>
-            <!-- Profiles will be loaded here -->
-        </div>
+{% block title %}Beacon Storage - HackMaster Pi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">Beacon Profiles</h2>
+    <p class="page-subtitle">Manage stored profiles for the BLE Beacon Emulator.</p>
+</div>
+
+<div class="dashboard-grid responsive-grid grid-1-1" style="gap: 2rem;">
+    <!-- Form -->
+    <div class="form-section form-group profile-form" style="margin: 0;">
+        <h3>Add New Profile</h3>
+        <form id="profileForm">
+            <div class="form-group">
+                <label for="name">Profile Name</label>
+                <input type="text" id="name" name="name" class="styled-input" required
+                    placeholder="e.g. Protocol Alpha">
+            </div>
+
+            <div class="form-group">
+                <label for="uuid">Proximity UUID</label>
+                <input type="text" id="uuid" name="uuid" class="styled-input" required placeholder="AA 21 98 B2 ...">
+            </div>
+
+            <div class="responsive-grid grid-1-1" style="gap: 1rem;">
+                <div class="form-group">
+                    <label for="major">Major</label>
+                    <input type="text" id="major" name="major" class="styled-input" required placeholder="00 01">
+                </div>
+                <div class="form-group">
+                    <label for="minor">Minor</label>
+                    <input type="text" id="minor" name="minor" class="styled-input" required placeholder="00 02">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="power">Tx Power</label>
+                <input type="text" id="power" name="power" class="styled-input" required placeholder="C8">
+            </div>
+
+            <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 1rem;">SAVE PROFILE TO
+                STORAGE</button>
+        </form>
     </div>
 
-    <script>
-        // 載入設定檔
-        async function loadProfiles() {
-            try {
-                const response = await fetch('/BLE/beacon-storage/profiles');
-                if (!response.ok) {
-                    throw new Error('Failed to load profiles');
-                }
-                const profiles = await response.json();
-                const profileList = document.getElementById('profileList');
-                
-                let html = '<h2>SAVED PROFILES</h2>';
-                if (profiles.length === 0) {
-                    html += '<div class="no-profiles">NO SAVED PROFILES FOUND</div>';
-                } else {
-                    profiles.forEach(profile => {
-                        html += `
+    <!-- List -->
+    <div class="form-section profile-list" style="margin: 0; min-height: 500px;" id="profileList">
+        <h3>Saved Profiles</h3>
+        <div class="data-list"
+            style="color: var(--text-muted); font-style: italic; text-align: center; padding: 2rem 0;">
+            LOADING PROFILES...
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    /* Styling for the dynamically loaded list elements */
+    .profile-item {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .profile-item:hover {
+        border-color: rgba(102, 252, 241, 0.4);
+        background: rgba(25, 25, 30, 0.8);
+    }
+
+    .profile-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .profile-info {
+        font-family: var(--font-mono);
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+
+    .profile-label {
+        color: #fff;
+        opacity: 0.7;
+    }
+
+    .profile-value {
+        color: #a0a0a0;
+    }
+
+    .delete-btn {
+        background: rgba(255, 71, 87, 0.08);
+        border: 1px solid var(--danger);
+        color: var(--danger);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .delete-btn:hover {
+        background: var(--danger);
+        color: #fff;
+    }
+
+    .status {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1.5rem;
+        font-family: var(--font-mono);
+        font-size: 0.9rem;
+        background: rgba(46, 213, 115, 0.1);
+        color: var(--success);
+        border: 1px solid rgba(46, 213, 115, 0.4);
+        text-align: center;
+    }
+
+    .status.error {
+        background: rgba(255, 71, 87, 0.1);
+        color: var(--danger);
+        border-color: rgba(255, 71, 87, 0.4);
+    }
+</style>
+<script>
+    // 載入設定檔
+    async function loadProfiles() {
+        try {
+            const response = await fetch('/BLE/beacon-storage/profiles');
+            if (!response.ok) {
+                throw new Error('Failed to load profiles');
+            }
+            const profiles = await response.json();
+            const profileList = document.getElementById('profileList');
+
+            let html = '<h3>Saved Profiles</h3><div class="data-list">';
+            if (profiles.length === 0) {
+                html += '<div style="color: var(--text-muted); font-style: italic; text-align: center; padding: 2rem 0;">NO SAVED PROFILES FOUND</div>';
+            } else {
+                profiles.forEach(profile => {
+                    html += `
                             <div class="profile-item">
                                 <div class="profile-details">
                                     <div class="profile-name">${profile.name}</div>
@@ -79,85 +168,86 @@
                                 <button class="delete-btn" onclick="deleteProfile('${profile.name}')">DELETE</button>
                             </div>
                         `;
-                    });
-                }
-                profileList.innerHTML = html;
-            } catch (error) {
-                console.error('Error:', error);
-                const profileList = document.getElementById('profileList');
-                profileList.innerHTML = '<h2>SAVED PROFILES</h2><div class="status error">ERROR LOADING PROFILES</div>';
-            }
-        }
-
-        // 新增設定檔
-        document.getElementById('profileForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const profile = Object.fromEntries(formData);
-            
-            const statusDiv = document.createElement('div');
-            statusDiv.className = 'status';
-            const form = document.getElementById('profileForm');
-            
-            // 移除先前的狀態消息
-            const oldStatus = form.querySelector('.status');
-            if (oldStatus) oldStatus.remove();
-            
-            try {
-                const response = await fetch('/BLE/beacon-storage/profiles', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(profile)
                 });
-                
-                if (response.ok) {
-                    e.target.reset();
-                    statusDiv.textContent = 'PROFILE ADDED SUCCESSFULLY';
-                    statusDiv.className = 'status';
-                    form.appendChild(statusDiv);
-                    loadProfiles();
-                    
-                    // 3秒後移除成功消息
-                    setTimeout(() => {
-                        statusDiv.remove();
-                    }, 3000);
-                } else {
-                    throw new Error('Failed to add profile');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                statusDiv.textContent = 'ERROR: FAILED TO ADD PROFILE';
-                statusDiv.className = 'status error';
+            }
+            html += '</div>';
+            profileList.innerHTML = html;
+        } catch (error) {
+            console.error('Error:', error);
+            const profileList = document.getElementById('profileList');
+            profileList.innerHTML = '<h3>Saved Profiles</h3><div class="status error">ERROR LOADING PROFILES</div>';
+        }
+    }
+
+    // 新增設定檔
+    document.getElementById('profileForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const profile = Object.fromEntries(formData);
+
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'status';
+        const form = document.getElementById('profileForm');
+
+        // 移除先前的狀態消息
+        const oldStatus = form.querySelector('.status');
+        if (oldStatus) oldStatus.remove();
+
+        try {
+            const response = await fetch('/BLE/beacon-storage/profiles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(profile)
+            });
+
+            if (response.ok) {
+                e.target.reset();
+                statusDiv.innerHTML = '<span style="color: var(--success);">PROFILE ADDED SUCCESSFULLY</span>';
+                statusDiv.className = 'status';
                 form.appendChild(statusDiv);
-            }
-        };
+                loadProfiles();
 
-        // 刪除設定檔
-        async function deleteProfile(name) {
-            if (!confirm(`Are you sure you want to delete the profile "${name}"?`)) {
-                return;
+                // 3秒後移除成功消息
+                setTimeout(() => {
+                    statusDiv.style.opacity = '0';
+                    setTimeout(() => statusDiv.remove(), 300);
+                }, 3000);
+            } else {
+                throw new Error('Failed to add profile');
             }
-            
-            try {
-                const response = await fetch(`/BLE/beacon-storage/profiles/${name}`, {
-                    method: 'DELETE'
-                });
-                
-                if (response.ok) {
-                    loadProfiles();
-                } else {
-                    throw new Error('Failed to delete profile');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('ERROR: FAILED TO DELETE PROFILE');
-            }
+        } catch (error) {
+            console.error('Error:', error);
+            statusDiv.innerHTML = '<span style="color: var(--danger);">ERROR: FAILED TO ADD PROFILE</span>';
+            statusDiv.className = 'status error';
+            form.appendChild(statusDiv);
+        }
+    };
+
+    // 刪除設定檔
+    async function deleteProfile(name) {
+        if (!confirm(`Are you sure you want to delete the profile "${name}"?`)) {
+            return;
         }
 
-        // 初始載入
-        document.addEventListener('DOMContentLoaded', function() {
-            loadProfiles();
-        });
-    </script>
-</body>
-</html>
+        try {
+            const response = await fetch(`/BLE/beacon-storage/profiles/${name}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                loadProfiles();
+            } else {
+                throw new Error('Failed to delete profile');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('ERROR: FAILED TO DELETE PROFILE');
+        }
+    }
+
+    // 初始載入
+    document.addEventListener('DOMContentLoaded', function () {
+        loadProfiles();
+    });
+</script>
+{% endblock %}

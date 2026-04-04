@@ -1,450 +1,423 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Password Wordlist Generator - HackMaster Pi</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-    <meta name="theme-color" content="#0f0f17">
-    <style>
-        .wordlist-management {
-            margin-top: 40px;
-            padding: 20px;
-            border: 1px solid #333;
-            border-radius: 8px;
-            background-color: #1a1a1a;
-        }
-        
-        .wordlist-management h2 {
-            margin-top: 0;
-            color: #00ffb3;
-        }
-        
-        .wordlists-container {
-            margin-top: 15px;
-        }
-        
-        .wordlists-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        
-        .wordlists-table th,
-        .wordlists-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #333;
-        }
-        
-        .wordlists-table th {
-            background-color: #2a2a2a;
-            color: #00ffb3;
-            font-weight: bold;
-        }
-        
-        .wordlists-table tr:hover {
-            background-color: #2a2a2a;
-        }
-        
-        .action-btn {
-            padding: 6px 12px;
-            margin: 0 3px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            font-size: 12px;
-            display: inline-block;
-        }
-        
-        .download-btn {
-            background-color: #007bff;
-            color: white;
-        }
-        
-        .download-btn:hover {
-            background-color: #0056b3;
-        }
-        
-        .delete-btn {
-            background-color: #dc3545;
-            color: white;
-        }
-        
-        .delete-btn:hover {
-            background-color: #c82333;
-        }
-        
-        #refreshWordlists {
-            background-color: #28a745;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        
-        #refreshWordlists:hover {
-            background-color: #218838;
-        }
-        
-        #refreshWordlists:disabled {
-            background-color: #6c757d;
-            cursor: not-allowed;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header-container">
-            <a href="/" class="back-button">← Back</a>
-            <h1>Password Wordlist Generator</h1>
-        </div>
-        <div class="form-group">
-            <p>Enter personal information to generate a targeted wordlist.</p>
-            <p>Add all relevant information about the target.</p>
-            
-            <h2>Information Guide</h2>
-            <div class="info-guide">
-                <p>The following information types can be used to generate an effective password wordlist. Please provide as much relevant information as possible:</p>
-                
-                <h3>Personal Identifiers</h3>
-                <ul>
-                    <li><strong>Name:</strong> Full names, nicknames, or aliases of the target person and their close associates (family members, friends, partners). Also consider including organization names or their abbreviations if relevant.</li>
-                    <li><strong>ID:</strong> National identification numbers, company unified business numbers, or other official identification codes.</li>
-                </ul>
-                
-                <h3>Contact Information</h3>
-                <ul>
-                    <li><strong>Phone Number:</strong> Mobile or landline numbers, including the two-digit area code prefix. Consider both current and previous numbers.</li>
-                    <li><strong>SSID:</strong> Wi-Fi network names (SSIDs) used at home, work, or frequently visited locations.</li>
-                </ul>
-                
-                <h3>Important Dates</h3>
-                <ul>
-                    <li><strong>Date:</strong> Significant dates in the format YYYY-MM-DD, such as:
-                        <ul>
-                            <li>Birthdays (target's own or those of close associates)</li>
-                            <li>Anniversaries or memorable events</li>
-                            <li>Current date or other relevant timeframes</li>
-                        </ul>
-                    </li>
-                </ul>
-                
-                <p><em>Note: The more accurate and comprehensive the information provided, the more effective the generated wordlist will be.</em></p>
+{% extends "base.html" %}
+
+{% block title %}Wordlist Engine - HackMaster Pi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">Wordlist Generator Engine</h2>
+    <p class="page-subtitle">Formulate precise attack dictionaries leveraging deterministic pattern generation,
+        combinatorial charset permutations, and rule-based dictionary mutations.</p>
+</div>
+
+<div class="dashboard-grid responsive-grid grid-3-2">
+
+    <!-- Left Column: Generator Configuration -->
+    <div>
+        <div class="form-section" style="padding: 0; overflow: hidden; margin-bottom: 2rem;">
+            <!-- Tabs -->
+            <div style="display: flex; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.4);">
+                <button class="wordlist-tab active" id="nav-pattern" data-target="tab-pattern">PATTERN GEN</button>
+                <button class="wordlist-tab" id="nav-charset" data-target="tab-charset">CHARSET GEN</button>
+                <button class="wordlist-tab" id="nav-dict" data-target="tab-dict">DICT MUTATION</button>
             </div>
-        </div>
-        
-        <form id="wordlistForm">
-            <div class="form-group">
-                <label for="output_filename">Output Filename:</label>
-                <input type="text" id="output_filename" name="output_filename" placeholder="wordlist.txt" required>
-            </div>
-            
-            <div class="form-group">
-                <h2>Personal Information:</h2>
-                <div id="info-container">
-                    <!-- 資訊類別區塊會動態加入這裡 -->
+
+            <!-- Tab Contents -->
+            <div style="padding: 2.5rem;">
+                <!-- Pattern Generator -->
+                <div id="tab-pattern" class="tab-pane active">
+                    <h3
+                        style="color: var(--primary); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(102, 252, 241, 0.2); padding-bottom: 0.5rem;">
+                        Deterministic Pattern</h3>
+                    <div class="form-group">
+                        <label for="pattern-input">BASE TEMPLATE (Use ?d, ?l, ?u, ?s)</label>
+                        <input type="text" id="pattern-input" class="styled-input" placeholder="e.g. WiFi?d?d?d?d">
+                    </div>
                 </div>
-                
-                <div class="input-group">
-                    <select id="new_info_type">
-                        <option value="date">Date</option>
-                        <option value="tel">Phone Number</option>
-                        <option value="name">Name</option>
-                        <option value="ID">ID Number</option>
-                        <option value="SSID">Wi-Fi SSID</option>
-                    </select>
-                    <button type="button" class="add-btn" onclick="addInfoType()">+ Add Info Type</button>
+
+                <!-- Charset Generator -->
+                <div id="tab-charset" class="tab-pane" style="display: none;">
+                    <h3
+                        style="color: var(--primary); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(102, 252, 241, 0.2); padding-bottom: 0.5rem;">
+                        Combinatorial Bruteforce</h3>
+
+                    <div class="responsive-grid grid-1-1" style="margin-bottom: 1.5rem;">
+                        <div class="form-group">
+                            <label for="min-length">MIN LENGTH</label>
+                            <input type="number" id="min-length" class="styled-input" value="8" min="1" max="64">
+                        </div>
+                        <div class="form-group">
+                            <label for="max-length">MAX LENGTH</label>
+                            <input type="number" id="max-length" class="styled-input" value="10" min="1" max="64">
+                        </div>
+                    </div>
+
+                    <div class="responsive-grid grid-1-1" style="gap: 1rem; margin-bottom: 1.5rem;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="charset-lower" checked
+                                style="accent-color: var(--primary); transform: scale(1.2);">
+                            <span style="font-family: var(--font-mono); font-size: 0.85rem;">LOWERCASE [a-z]</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="charset-upper"
+                                style="accent-color: var(--primary); transform: scale(1.2);">
+                            <span style="font-family: var(--font-mono); font-size: 0.85rem;">UPPERCASE [A-Z]</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="charset-numbers" checked
+                                style="accent-color: var(--primary); transform: scale(1.2);">
+                            <span style="font-family: var(--font-mono); font-size: 0.85rem;">NUMBERS [0-9]</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="charset-symbols"
+                                style="accent-color: var(--primary); transform: scale(1.2);">
+                            <span style="font-family: var(--font-mono); font-size: 0.85rem;">SYMBOLS [!@#$]</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="custom-charset">APPEND CUSTOM CHARACTER SET</label>
+                        <input type="text" id="custom-charset" class="styled-input" placeholder="e.g. !@#_-%">
+                    </div>
                 </div>
-            </div>
-            
-            <button type="submit">Generate Wordlist</button>
-        </form>
-        
-        <div class="terminal-output" id="output">
-> System ready for wordlist generation...
-> Enter target information and submit to begin.
-        </div>
-        
-        <div class="status" id="status" style="display: none;">
-            Processing request...
-        </div>
-        
-        <div class="wordlist-management">
-            <h2>Generated Wordlists</h2>
-            <button type="button" id="refreshWordlists" onclick="loadCustomWordlists()">Refresh List</button>
-            <div id="wordlistsList" class="wordlists-container">
-                <p>Click "Refresh List" to load your generated wordlists.</p>
+
+                <!-- Dictionary Mutation -->
+                <div id="tab-dict" class="tab-pane" style="display: none;">
+                    <h3
+                        style="color: var(--primary); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(102, 252, 241, 0.2); padding-bottom: 0.5rem;">
+                        Base Dictionary Mutator</h3>
+                    <div class="form-group">
+                        <label for="dict-input">BASE DICTIONARY PATH / NAME</label>
+                        <input type="text" id="dict-input" class="styled-input" placeholder="rockyou.txt">
+                    </div>
+                    <div class="form-group">
+                        <label for="rule-input">HASHCAT RULE DEFINITION</label>
+                        <input type="text" id="rule-input" class="styled-input" placeholder="best64.rule">
+                    </div>
+                </div>
+
+                <!-- Common Settings -->
+                <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 1.5rem; padding-top: 2rem;">
+                    <div class="form-group">
+                        <label for="output-name-input">OUTPUT FILENAME</label>
+                        <input type="text" id="output-name-input" class="styled-input"
+                            placeholder="custom_wordlist.txt">
+                    </div>
+                    <button id="generate-btn" class="btn btn-primary"
+                        style="width: 100%; padding: 1rem; font-size: 1rem;">COMPILE PAYLOAD LIST</button>
+                    <div id="generate-status"
+                        style="margin-top: 1rem; font-family: var(--font-mono); font-size: 0.85rem; text-align: center; color: var(--primary);">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    
-    <script>
-        // 用來存儲所有資訊的物件
-        let infoData = {};
-        
-        // 添加新的資訊類別
-        function addInfoType() {
-            const infoType = document.getElementById('new_info_type').value;
-            const infoTypeText = document.getElementById('new_info_type').options[document.getElementById('new_info_type').selectedIndex].text;
-            
-            // 檢查是否已存在此類別
-            if (document.getElementById(`section-${infoType}`)) {
-                alert(`${infoTypeText} is already added.`);
-                return;
-            }
-            
-            // 初始化資料結構
-            if (!infoData[infoType]) {
-                infoData[infoType] = [];
-            }
-            
-            const container = document.getElementById('info-container');
-            
-            // 創建新的資訊類別區塊
-            const sectionDiv = document.createElement('div');
-            sectionDiv.className = 'info-section';
-            sectionDiv.id = `section-${infoType}`;
-            
-            sectionDiv.innerHTML = `
-                <div class="info-section-title">
-                    <h3>${infoTypeText}</h3>
-                    <button type="button" class="delete-btn" onclick="removeInfoType('${infoType}')">Remove this type</button>
-                </div>
-                <div class="input-group">
-                    <input type="text" id="new_value_${infoType}" placeholder="Enter ${infoTypeText.toLowerCase()} value">
-                    <button type="button" class="add-btn" onclick="addInfoValue('${infoType}')">Add</button>
-                </div>
-                <div class="info-values" id="values-${infoType}">
-                    <!-- 該類別的值會動態加入這裡 -->
-                </div>
-            `;
-            
-            container.appendChild(sectionDiv);
-        }
-        
-        // 移除資訊類別
-        function removeInfoType(infoType) {
-            const sectionElement = document.getElementById(`section-${infoType}`);
-            if (sectionElement) {
-                sectionElement.remove();
-                // 從資料中移除
-                delete infoData[infoType];
-            }
-        }
-        
-        // 添加資訊值
-        function addInfoValue(infoType) {
-            const inputElement = document.getElementById(`new_value_${infoType}`);
-            const value = inputElement.value.trim();
-            
-            if (!value) {
-                alert("Please enter a value.");
-                return;
-            }
-            
-            // 檢查是否重複
-            if (infoData[infoType].includes(value)) {
-                alert("This value is already added.");
-                return;
-            }
-            
-            // 添加到資料
-            infoData[infoType].push(value);
-            
-            // 添加到 UI
-            const valuesContainer = document.getElementById(`values-${infoType}`);
-            const valueElement = document.createElement('div');
-            valueElement.className = 'value-tag';
-            valueElement.innerHTML = `
-                ${value} <button type="button" class="delete-btn" onclick="removeInfoValue('${infoType}', '${value}')">X</button>
-            `;
-            
-            valuesContainer.appendChild(valueElement);
-            
-            // 清空輸入框
-            inputElement.value = '';
-        }
-        
-        // 移除資訊值
-        function removeInfoValue(infoType, value) {
-            // 從資料中移除
-            infoData[infoType] = infoData[infoType].filter(item => item !== value);
-            
-            // 重新渲染該類別的所有值
-            const valuesContainer = document.getElementById(`values-${infoType}`);
-            valuesContainer.innerHTML = '';
-            
-            infoData[infoType].forEach(val => {
-                const valueElement = document.createElement('div');
-                valueElement.className = 'value-tag';
-                valueElement.innerHTML = `
-                    ${val} <button type="button" class="delete-btn" onclick="removeInfoValue('${infoType}', '${val}')">X</button>
-                `;
-                valuesContainer.appendChild(valueElement);
-            });
-        }
-        
-        // 表單提交
-        document.getElementById('wordlistForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const statusDiv = document.getElementById('status');
-            const outputDiv = document.getElementById('output');
-            
-            // 檢查是否添加了任何資訊
-            let hasInfo = false;
-            for (const type in infoData) {
-                if (infoData[type].length > 0) {
-                    hasInfo = true;
-                    break;
-                }
-            }
-            
-            if (!hasInfo) {
-                alert("Please add at least one piece of information.");
-                return;
-            }
-            
-            // 顯示處理狀態
-            statusDiv.className = 'status';
-            statusDiv.textContent = 'Processing request...';
-            statusDiv.style.display = 'block';
-            
-            outputDiv.innerHTML = '> Starting wordlist generation...\n> Please wait, this may take a moment.';
-            
-            // 整理要發送的資料
-            const formData = {
-                output_filename: document.getElementById('output_filename').value,
-                info_data: infoData
-            };
-            
-            // 發送 JSON 資料到後端
-            fetch('/WiFi/wordlist-generator', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Server error: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    statusDiv.textContent = 'Wordlist generated successfully!';
-                    outputDiv.innerHTML = '> Wordlist generation complete.\n> File saved as: ' + data.filename + '\n> Generated ' + data.count + ' passwords.\n\n' + data.sample;
-                    
-                    if (data.download_link) {
-                        const downloadLink = document.createElement('a');
-                        downloadLink.href = data.download_link;
-                        downloadLink.textContent = 'Download Wordlist';
-                        downloadLink.className = 'download-link';
-                        downloadLink.style.display = 'block';
-                        downloadLink.style.marginTop = '20px';
-                        downloadLink.style.color = '#00ffb3';
-                        statusDiv.appendChild(downloadLink);
-                    }
-                } else {
-                    statusDiv.className = 'status error';
-                    statusDiv.textContent = 'Error: ' + data.error;
-                    outputDiv.innerHTML += '\n> ERROR: ' + data.error;
-                }
-            })
-            .catch(error => {
-                statusDiv.className = 'status error';
-                statusDiv.textContent = 'Error: ' + error.message;
-                outputDiv.innerHTML += '\n> CONNECTION ERROR: ' + error.message;
+
+    <!-- Right Column: Results & Repos -->
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+
+        <!-- Live Generation Log -->
+        <div class="glass-card" style="padding: 1.5rem;">
+            <h3
+                style="color: #fff; margin-bottom: 1rem; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
+                <span
+                    style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary); display: inline-block;"></span>
+                Compiler Telemetry
+            </h3>
+            <div id="generation-log"
+                style="background: rgba(0,0,0,0.5); padding: 1rem; height: 250px; overflow-y: auto; border-radius: 8px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); border: 1px solid rgba(255,255,255,0.05); line-height: 1.5;">
+                <span style="color: var(--success);">> INITIALIZING WORDLIST COMPILER ENGINE...</span><br>
+                > AWAITING CONFIGURATION STRATEGY...
+            </div>
+        </div>
+
+        <!-- Wordlist Vault -->
+        <div class="glass-card" style="padding: 1.5rem;">
+            <h3
+                style="color: #fff; margin-bottom: 1rem; font-size: 1.1rem; display: flex; justify-content: space-between;">
+                Available Wordlists
+                <span class="status-badge" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">VAULT</span>
+            </h3>
+            <div id="wordlists-container"
+                style="max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; padding-right: 0.5rem;">
+                <div
+                    style="text-align: center; font-style: italic; color: var(--text-muted); margin-top: 2rem; font-family: var(--font-mono);">
+                    SYNCING VAULT MANIFEST...</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    .wordlist-tab {
+        flex: 1;
+        background: transparent;
+        border: none;
+        padding: 1rem 0;
+        color: var(--text-muted);
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        position: relative;
+        transition: 0.2s;
+    }
+
+    .wordlist-tab:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .wordlist-tab.active {
+        color: var(--primary);
+        background: rgba(102, 252, 241, 0.05);
+    }
+
+    .wordlist-tab.active::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--primary);
+        box-shadow: 0 0 10px var(--primary);
+    }
+
+    .wordlist-file {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: 0.2s;
+    }
+
+    .wordlist-file:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(102, 252, 241, 0.3);
+    }
+
+    .wordlist-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .wordlist-name {
+        color: #fff;
+        font-weight: 600;
+        font-family: var(--font-mono);
+        font-size: 0.9rem;
+        word-break: break-all;
+    }
+
+    .wordlist-meta {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.2rem;
+    }
+
+    .wordlist-tag {
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: rgba(102, 252, 241, 0.1);
+        color: var(--primary);
+        border: 1px solid rgba(102, 252, 241, 0.2);
+        margin-right: 0.5rem;
+        text-transform: uppercase;
+    }
+
+    /* Custom scrollbar for containers */
+    #generation-log::-webkit-scrollbar,
+    #wordlists-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #generation-log::-webkit-scrollbar-thumb,
+    #wordlists-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Tab Implementation
+        const tabs = document.querySelectorAll('.wordlist-tab');
+        const panes = document.querySelectorAll('.tab-pane');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active from all
+                tabs.forEach(t => t.classList.remove('active'));
+                panes.forEach(p => p.style.display = 'none');
+
+                // Add to current
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.target).style.display = 'block';
             });
         });
-        
-        // 載入自定義字典檔案列表
-        async function loadCustomWordlists() {
-            const refreshButton = document.getElementById('refreshWordlists');
-            const wordlistsList = document.getElementById('wordlistsList');
-            
-            refreshButton.disabled = true;
-            refreshButton.textContent = 'Loading...';
-            wordlistsList.innerHTML = '<p>Loading wordlists...</p>';
-            
+
+        // Original JS Logic hooks
+        const generateBtn = document.getElementById('generate-btn');
+        const generateStatus = document.getElementById('generate-status');
+        const generationLog = document.getElementById('generation-log');
+        const wordlistsContainer = document.getElementById('wordlists-container');
+        const outputNameInput = document.getElementById('output-name-input');
+
+        // Load Existing Wordlists
+        loadWordlists();
+
+        generateBtn.addEventListener('click', async function () {
+            let method = '';
+            let config = {};
+
+            // Determine active method
+            if (document.getElementById('nav-pattern').classList.contains('active')) {
+                method = 'pattern';
+                config = {
+                    pattern: document.getElementById('pattern-input').value
+                };
+                if (!config.pattern) {
+                    alert('Please enter a pattern');
+                    return;
+                }
+            } else if (document.getElementById('nav-charset').classList.contains('active')) {
+                method = 'charset';
+                config = {
+                    min_length: parseInt(document.getElementById('min-length').value),
+                    max_length: parseInt(document.getElementById('max-length').value),
+                    use_lower: document.getElementById('charset-lower').checked,
+                    use_upper: document.getElementById('charset-upper').checked,
+                    use_numbers: document.getElementById('charset-numbers').checked,
+                    use_symbols: document.getElementById('charset-symbols').checked,
+                    custom_charset: document.getElementById('custom-charset').value
+                };
+                if (!config.use_lower && !config.use_upper && !config.use_numbers && !config.use_symbols && !config.custom_charset) {
+                    alert('Please select at least one character set');
+                    return;
+                }
+            } else if (document.getElementById('nav-dict').classList.contains('active')) {
+                method = 'mutation';
+                config = {
+                    base_dict: document.getElementById('dict-input').value,
+                    rule_file: document.getElementById('rule-input').value
+                };
+                if (!config.base_dict || !config.rule_file) {
+                    alert('Please specify both a base dictionary and a rule definition');
+                    return;
+                }
+            }
+
+            // Add output filename if provided
+            if (outputNameInput.value.trim()) {
+                config.output_filename = outputNameInput.value.trim();
+            }
+
+            // Start Generation
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="spinner" style="vertical-align: middle; margin-right: 8px;"></span> COMPILING...';
+            generateStatus.textContent = 'Allocating memory and executing generator algorithm...';
+            generateStatus.style.color = 'var(--warning)';
+
+            logMessage(`> EXECUTING COMPILER WITH STRATEGY [${method.toUpperCase()}]`);
+
             try {
+                const response = await fetch('/WiFi/wordlists/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ method, config })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    generateStatus.textContent = `SUCCESS: ${data.message}`;
+                    generateStatus.style.color = 'var(--success)';
+                    logMessage(`> GENERATION COMPLETE. TARGET PATH: ${data.filename || config.output_filename}`, 'success');
+
+                    if (data.lines_generated) {
+                        logMessage(`> YIELD: ${data.lines_generated.toLocaleString()} PAYLOAD STRINGS`, 'info');
+                    }
+
+                    // Reload Wordlists
+                    setTimeout(loadWordlists, 1000);
+                } else {
+                    throw new Error(data.message || 'Generation failed');
+                }
+            } catch (error) {
+                generateStatus.textContent = `ERROR: ${error.message}`;
+                generateStatus.style.color = 'var(--danger)';
+                logMessage(`> SYSTEM FAULT: ${error.message.toUpperCase()}`, 'error');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'COMPILE PAYLOAD LIST';
+            }
+        });
+
+        async function loadWordlists() {
+            try {
+                wordlistsContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 2rem;">SYNCING REPOSITORY...</div>';
                 const response = await fetch('/WiFi/wordlists/list');
                 const data = await response.json();
-                
-                if (data.success) {
-                    // 只顯示自定義字典 (category === 'custom')
-                    const customWordlists = data.wordlists.filter(w => w.category === 'custom');
-                    
-                    if (customWordlists.length === 0) {
-                        wordlistsList.innerHTML = '<p>No custom wordlists found. Generate one above to see it here.</p>';
-                    } else {
-                        let html = '<table class="wordlists-table">';
-                        html += '<thead><tr><th>Filename</th><th>Size</th><th>Modified</th><th>Actions</th></tr></thead>';
-                        html += '<tbody>';
-                        
-                        customWordlists.forEach(wordlist => {
-                            const sizeKB = (wordlist.size / 1024).toFixed(2);
-                            html += `
-                                <tr>
-                                    <td>${wordlist.filename}</td>
-                                    <td>${sizeKB} KB</td>
-                                    <td>${wordlist.modified}</td>
-                                    <td>
-                                        <a href="${wordlist.download_link}" class="action-btn download-btn" download>Download</a>
-                                        <button class="action-btn delete-btn" onclick="deleteWordlist('${wordlist.filename}')">Delete</button>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                        
-                        html += '</tbody></table>';
-                        wordlistsList.innerHTML = html;
+
+                if (data.success && data.wordlists) {
+                    wordlistsContainer.innerHTML = '';
+
+                    if (data.wordlists.length === 0) {
+                        wordlistsContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-style: italic; font-size: 0.85rem; padding: 2rem;">VAULT EMPTY. NO PAYLOAD LISTS FOUND.</div>';
+                        return;
                     }
-                } else {
-                    wordlistsList.innerHTML = `<p>Error loading wordlists: ${data.message}</p>`;
+
+                    data.wordlists.forEach(file => {
+                        const sizeStr = formatFileSize(file.size);
+                        const html = `
+                                <div class="wordlist-file">
+                                    <div class="wordlist-info">
+                                        <div class="wordlist-name">${file.filename}</div>
+                                        <div class="wordlist-meta">
+                                            <span class="wordlist-tag">${file.category || 'STD'}</span> 
+                                            SIZE: ${sizeStr}
+                                        </div>
+                                    </div>
+                                    <a href="/WiFi/wordlists/download/${file.filename}" class="btn" style="background: rgba(102, 252, 241, 0.1); color: var(--primary); padding: 0.4rem 0.8rem; font-size: 0.75rem; border: 1px solid rgba(102, 252, 241, 0.2); text-decoration: none;">DL</a>
+                                </div>
+                            `;
+                        wordlistsContainer.insertAdjacentHTML('beforeend', html);
+                    });
                 }
             } catch (error) {
-                wordlistsList.innerHTML = `<p>Error loading wordlists: ${error.message}</p>`;
-            } finally {
-                refreshButton.disabled = false;
-                refreshButton.textContent = 'Refresh List';
+                console.error('Failed to sync vault:', error);
+                wordlistsContainer.innerHTML = '<div style="text-align: center; color: var(--danger); font-size: 0.85rem; padding: 2rem;">FAIL: UNABLE TO SYNC VFS</div>';
             }
         }
-        
-        // 刪除字典檔案
-        async function deleteWordlist(filename) {
-            if (!confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/WiFi/wordlists/custom/${filename}`, {
-                    method: 'DELETE'
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert(`Successfully deleted ${filename}`);
-                    // 重新載入列表
-                    loadCustomWordlists();
-                } else {
-                    alert(`Failed to delete ${filename}: ${data.message}`);
-                }
-            } catch (error) {
-                alert(`Error deleting wordlist: ${error.message}`);
-            }
+
+        function logMessage(msg, type = 'normal') {
+            const colors = {
+                normal: 'var(--text-muted)',
+                success: 'var(--success)',
+                error: 'var(--danger)',
+                info: 'var(--primary)'
+            };
+
+            const logLine = document.createElement('div');
+            logLine.style.color = colors[type];
+            logLine.textContent = msg;
+
+            generationLog.appendChild(logLine);
+            generationLog.scrollTop = generationLog.scrollHeight;
         }
-        
-        // 頁面載入時自動載入字典列表
-        window.addEventListener('load', function() {
-            loadCustomWordlists();
-        });
-    </script>
-</body>
-</html>
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+            else if (bytes < 1073741824) return (bytes / 1048576).toFixed(2) + ' MB';
+            else return (bytes / 1073741824).toFixed(2) + ' GB';
+        }
+    });
+</script>
+{% endblock %}
