@@ -1,181 +1,168 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-    <title>Write UID to HF RFID CUID Card - HackMaster Pi</title>
-    <meta name="theme-color" content="#0f0f17">
-</head>
-<body>
-    <div class="container">
-        <div class="header-container">
-            <a href="/" class="back-button">← BACK</a>
-            <h1>Write UID to HF RFID CUID Card</h1>
-        </div>
-        
-        <div class="info-guide">
-            <h3>RFID UID Writer</h3>
-            <p>This tool allows you to write a new UID to a CUID (Chinese UID) card. CUID cards have writable Block 0, making them useful for cloning access cards.</p>
-            <p><strong>Note:</strong> Only works with CUID cards. Regular Mifare cards have read-only UIDs that cannot be changed.</p>
-        </div>
-        
-        <div class="wifi-cracker-container">
-            <div class="wifi-cracker-section" id="setup-section">
-                <h2>1. Setup PN532</h2>
-                <div class="wifi-controls">
-                    <button id="setup-btn" class="wifi-button">Setup</button>
-                </div>
-                <div id="setup-status" class="wifi-status"></div>
-            </div>
+{% extends "base.html" %}
 
-            <div class="wifi-cracker-section" id="place-card-section">
-                <h2>2. Place your HF RFID card on the reader</h2>
-                <p>Position your CUID card on the PN532 reader before writing.</p>
-            </div>
+{% block title %}Write UID - HackMaster Pi{% endblock %}
 
-            <div class="wifi-cracker-section" id="write-section">
-                <h2>3. Write New UID</h2>
-                <div class="form-group">
-                    <label for="new-uid">New UID (8 hex characters):</label>
-                    <input type="text" id="new-uid" class="wifi-input" placeholder="Enter new UID in hex format (e.g., 1a3b5c7d)" maxlength="8" />
-                    <div class="wifi-controls">
-                        <button id="write-btn" class="wifi-button" disabled>Write UID</button>
-                    </div>
-                </div>
-                <div id="write-status" class="wifi-status"></div>
-                
-                <div id="write-result" class="result-card" style="display: none;">
-                    <div class="result-title">
-                        <h3>Write Result</h3>
-                    </div>
-                    <p id="write-result-message"></p>
-                </div>
-            </div>
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">RFID UID Cloner</h2>
+    <p class="page-subtitle">Clone access cards by writing a custom hex UID to the Block 0 sector of Chinese UID (CUID)
+        rewriting cards.</p>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: 1fr;">
+
+    <!-- Stage 1: Setup Reader -->
+    <div class="glass-card flex-row" id="setup-section"
+        style="justify-content: space-between; padding: 1.5rem 2rem; margin-bottom: 0;">
+        <div style="flex: 1;">
+            <h3 style="margin-bottom: 0.5rem; color: #fff;">1. Initialize PN532 Reader</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Connect and prepare the physical NFC module for
+                writing operations.</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div id="setup-status" class="status-indicator"
+                style="font-family: var(--font-mono); font-size: 0.85rem; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: rgba(0,0,0,0.3);">
+                -</div>
+            <button id="setup-btn" class="btn btn-primary">INITIALIZE</button>
         </div>
     </div>
 
-    <script>
-        const setupBtn = document.getElementById('setup-btn');
-        const writeBtn = document.getElementById('write-btn');
-        const newUidInput = document.getElementById('new-uid');
-        
-        const setupStatus = document.getElementById('setup-status');
-        const writeStatus = document.getElementById('write-status');
-        
-        const writeResult = document.getElementById('write-result');
-        const writeResultMessage = document.getElementById('write-result-message');
+    <!-- Stage 2: Write -->
+    <div class="glass-card" id="write-section"
+        style="display: flex; flex-direction: column; padding: 2rem; margin-bottom: 0;">
+        <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 0.5rem; color: #fff;">2. Payload Provisioning</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Place a CUID rewriting card on the reader and enter
+                the 8-character Hex UID payload to inject into Sector 0.</p>
+        </div>
 
-        let isSetup = false;
+        <div class="form-group" style="max-width: 500px; margin: 0 auto; width: 100%;">
+            <label for="new-uid">4-BYTE HEX PAYLOAD (8 CHARACTERS)</label>
+            <div class="flex-row">
+                <input type="text" id="new-uid" class="styled-input" style="flex: 1; text-transform: uppercase;"
+                    placeholder="e.g. 1A3B5C7D" maxlength="8">
+                <button id="write-btn" class="btn btn-danger" disabled>OVERWRITE</button>
+            </div>
+            <div id="write-status"
+                style="margin-top: 1rem; font-family: var(--font-mono); font-size: 0.9rem; text-align: center; min-height: 20px;">
+            </div>
+        </div>
 
-        // Setup PN532
-        setupBtn.addEventListener('click', async () => {
-            setupBtn.disabled = true;
-            setupStatus.innerHTML = '<p>Setting up PN532...</p>';
-            setupStatus.className = 'wifi-status info';
-            
-            try {
-                const response = await fetch('/RFID/setup-pn532', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    setupStatus.innerHTML = `<p>✅ Setup successful: ${result.message}</p>`;
-                    setupStatus.className = 'wifi-status success';
-                    document.getElementById('setup-section').classList.add('completed');
-                    isSetup = true;
-                    updateWriteButtonState();
-                } else {
-                    setupStatus.innerHTML = `<p>❌ Setup failed: ${result.error}</p>`;
-                    setupStatus.className = 'wifi-status error';
+        <div id="write-result"
+            style="display: none; margin-top: 2rem; background: rgba(46, 213, 115, 0.1); border: 1px solid rgba(46, 213, 115, 0.3); padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <h4 style="color: var(--success); margin-bottom: 0.5rem;">Operation Terminated</h4>
+            <p id="write-result-message" style="color: #fff; font-family: var(--font-mono); font-size: 0.95rem;"></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const setupBtn = document.getElementById('setup-btn');
+    const writeBtn = document.getElementById('write-btn');
+    const newUidInput = document.getElementById('new-uid');
+
+    const setupStatus = document.getElementById('setup-status');
+    const writeStatus = document.getElementById('write-status');
+
+    const writeResult = document.getElementById('write-result');
+    const writeResultMessage = document.getElementById('write-result-message');
+
+    let isSetup = false;
+
+    // Setup PN532
+    setupBtn.addEventListener('click', async () => {
+        setupBtn.disabled = true;
+        setupStatus.innerHTML = '<span style="color:var(--primary)">Setting up PN532...</span>';
+
+        try {
+            const response = await fetch('/RFID/setup-pn532', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
                 }
-            } catch (error) {
-                setupStatus.innerHTML = `<p>❌ Error: ${error.message}</p>`;
-                setupStatus.className = 'wifi-status error';
-            } finally {
-                setupBtn.disabled = false;
-            }
-        });
+            });
 
-        // Validate UID input
-        newUidInput.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/[^0-9a-fA-F]/g, '');
-            if (value.length > 8) {
-                value = value.substring(0, 8);
-            }
-            e.target.value = value;
-            updateWriteButtonState();
-        });
+            const result = await response.json();
 
-        function updateWriteButtonState() {
-            const isValidUid = /^[0-9a-fA-F]{8}$/.test(newUidInput.value);
-            writeBtn.disabled = !isSetup || !isValidUid;
+            if (result.success) {
+                setupStatus.innerHTML = '<span style="color:var(--success)">✅ Setup successful</span>';
+                isSetup = true;
+                updateWriteButtonState();
+            } else {
+                setupStatus.innerHTML = `<span style="color:var(--danger)">❌ Setup failed</span>`;
+            }
+        } catch (error) {
+            setupStatus.innerHTML = `<span style="color:var(--danger)">❌ Error</span>`;
+        } finally {
+            setupBtn.disabled = false;
+        }
+    });
+
+    // Validate UID input
+    newUidInput.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/[^0-9a-fA-F]/g, '');
+        if (value.length > 8) {
+            value = value.substring(0, 8);
+        }
+        e.target.value = value;
+        updateWriteButtonState();
+    });
+
+    function updateWriteButtonState() {
+        const isValidUid = /^[0-9a-fA-F]{8}$/.test(newUidInput.value);
+        writeBtn.disabled = !isSetup || !isValidUid;
+    }
+
+    // Write UID
+    writeBtn.addEventListener('click', async () => {
+        const newUid = newUidInput.value.toLowerCase();
+
+        if (!newUid || newUid.length !== 8) {
+            writeStatus.innerHTML = '<span style="color:var(--danger)">Please enter a valid 8-character hex UID.</span>';
+            return;
         }
 
-        // Write UID
-        writeBtn.addEventListener('click', async () => {
-            const newUid = newUidInput.value.toLowerCase();
-            
-            if (!newUid || newUid.length !== 8) {
-                writeStatus.innerHTML = '<p>Please enter a valid 8-character hex UID.</p>';
-                writeStatus.className = 'wifi-status error';
-                return;
-            }
-            
-            writeBtn.disabled = true;
-            writeStatus.innerHTML = '<p>Writing UID... Please keep the card on the reader.</p>';
-            writeStatus.className = 'wifi-status info';
-            writeResult.style.display = 'none';
-            document.getElementById('write-section').classList.add('active');
-            
-            try {
-                const response = await fetch('/RFID/write-uid', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        card_data: {
-                            uid: newUid
-                        },
-                        save_to_db: false
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    writeStatus.innerHTML = '<p>✅ UID written successfully!</p>';
-                    writeStatus.className = 'wifi-status success';
-                    writeResultMessage.textContent = result.message;
-                    writeResult.style.display = 'block';
-                    document.getElementById('write-section').classList.remove('active');
-                    document.getElementById('write-section').classList.add('completed');
-                    
-                    // Reset for next operation
-                    newUidInput.value = '';
-                    updateWriteButtonState();
-                } else {
-                    writeStatus.innerHTML = `<p>❌ Write failed: ${result.error}</p>`;
-                    writeStatus.className = 'wifi-status error';
-                    document.getElementById('write-section').classList.remove('active');
-                }
-            } catch (error) {
-                writeStatus.innerHTML = `<p>❌ Error: ${error.message}</p>`;
-                writeStatus.className = 'wifi-status error';
-                document.getElementById('write-section').classList.remove('active');
-            } finally {
-                updateWriteButtonState();
-            }
-        });
+        writeBtn.disabled = true;
+        writeStatus.innerHTML = '<span style="color:var(--primary)">INJECTING PAYLOAD... DO NOT REMOVE CARD.</span>';
+        writeResult.style.display = 'none';
 
-        // Initial button state
-        updateWriteButtonState();
-    </script>
-</body>
-</html>
+        try {
+            const response = await fetch('/RFID/write-uid', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    card_data: {
+                        uid: newUid
+                    },
+                    save_to_db: false
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                writeStatus.innerHTML = '';
+                writeResultMessage.textContent = 'PAYLOAD SUCCESS: ' + result.message;
+                writeResult.style.display = 'block';
+
+                // Reset for next operation
+                newUidInput.value = '';
+                updateWriteButtonState();
+            } else {
+                writeStatus.innerHTML = `<span style="color:var(--danger)">❌ Write failed: ${result.error}</span>`;
+            }
+        } catch (error) {
+            writeStatus.innerHTML = `<span style="color:var(--danger)">❌ Error: ${error.message}</span>`;
+        } finally {
+            updateWriteButtonState();
+        }
+    });
+
+    // Initial button state
+    updateWriteButtonState();
+</script>
+{% endblock %}

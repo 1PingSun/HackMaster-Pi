@@ -1,95 +1,124 @@
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <title>HackMaster Pi</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-        <meta name="theme-color" content="#0f0f17">
-    </head>
-    <body>
-        <div class="container">
-            <img src="{{ url_for('static', path='/img/PNG-Text-Dark.png') }}" alt="Logo" class="logo" />
-            <h2>Bluetooth</h2>
-            <div class="card-container">
-                <div class="card">
-                    <a href="/BLE/beacon-scanner"><h3>Beacon Scanner</h3></a>
-                    <p>Scan to list nearby Beacon devices</p>
-                </div>
-                <div class="card">
-                    <a href="/BLE/beacon-storage"><h3>Beacon Storage</h3></a>
-                    <p>Manage your beacon profiles</p>
-                </div>
-                <div class="card">
-                    <a href="/BLE/beacon-emulator"><h3>Beacon Emulator</h3></a>
-                    <p>Emulate Beacon with profiles</p>
-                </div>
-                <div class="card">
-                    <a href="/BLE/airpods-emulator"><h3>AirPods Emulator</h3></a>
-                    <p>Emulate Apple device (AirPods)</p>
-                </div>
-            </div>
-            <h2>Wi-Fi</h2>
-            <div class="card-container">
-                <div class="card">
-                    <a href="/WiFi/ap-emulator"><h3>AP Emulator</h3></a>
-                    <p>Emulate mutiple AP</p>
-                </div>
-                <div class="card">
-                    <a href="/WiFi/wifi-scanner"><h3>Wi-Fi Defense Scanner</h3></a>
-                    <p>Scan networks & analyze security threats</p>
-                </div>
-                <div class="card">
-                    <a href="/WiFi/wifi-cracker"><h3>Wi-Fi Password Cracker</h3></a>
-                    <p>Crack Wi-Fi password using wordlist</p>
-                </div>
-                <div class="card">
-                    <a href="/WiFi/wordlist-generator"><h3>Password Wordlist Generator</h3></a>
-                    <p>Customizable password wordlist generator</p>
-                </div>
-            </div>
-            <h2>Infrared (IR)</h2>
-            <div class="card-container">
-                <div class="card">
-                    <a href="/IR/signal-learner"><h3>Signal Learning</h3></a>
-                    <p>Clone infrared remote control signal</p>
-                </div>
-                <div class="card">
-                    <a href="/IR/signal-enumerator"><h3>Signal Enumerator</h3></a>
-                    <p>Enumerate infrared code to brute force devices</p>
-                </div>
-            </div>
-            <h2>RFID</h2>
-            <div class="card-container">
-                <div class="card">
-                    <a href="/RFID/identify-rfid"><h3>Identify & Analyze RFID</h3></a>
-                    <p>Identify RFID card & analyze security</p>
-                </div>
-                <div class="card">
-                    <a href="/RFID/write-uid"><h3>Write UID</h3></a>
-                    <p>Write UID to a CUID card</p>
-                </div>
-            </div>
-            <!-- <h2>USB</h2>
-            <div class="card-container">
-                <div class="card">
-                    <a><h3>BadUSB</h3></a>
-                    <p>USB Keystroke Injection Attack</p>
-                </div>
-                <div class="card">
-                    <a><h3>USB MiTM</h3></a>
-                    <p>Keyboard input MiTM</p>
-                </div>
-            </div> -->
+{% extends "base.html" %}
 
-            <footer class="footer">
-                <div class="disclaimer">
-                    <h3>DISCLAIMER</h3>
-                    <p>This tool is provided for educational and security research purposes only.</p>
-                    <p>The user assumes all responsibility for the use of this tool.</p>
-                    <p>Unauthorized access to computer systems and networks is illegal.</p>
-                    <p>DO NOT use this tool for any illegal, unauthorized, or malicious activities.</p>
-                </div>
-            </footer>
+{% block title %}Dashboard - HackMaster Pi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">Command Center</h2>
+    <p class="page-subtitle">Welcome to HackMaster Pi. Select a module below to begin your operations.</p>
+</div>
+
+<div class="dashboard-grid">
+    <a href="/BLE/beacon-scanner" style="text-decoration:none">
+        <div class="glass-card">
+            <h3 class="card-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v20M17 7l-10 10M17 17L7 7" />
+                </svg>
+                Beacon Scanner
+            </h3>
+            <p style="color:var(--text-muted)">Scan and analyze surrounding Bluetooth Low Energy Beacons in real-time.
+            </p>
         </div>
-    </body>
-</html>
+    </a>
+
+    <a href="/BLE/airpods-emulator" style="text-decoration:none">
+        <div class="glass-card">
+            <h3 class="card-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 10a6 6 0 0 0-12 0v8h12v-8z" />
+                </svg>
+                AirPods Emulator
+            </h3>
+            <p style="color:var(--text-muted)">Broadcast spoofed AirPods Pro advertising packets to trigger Apple UI
+                popups.</p>
+        </div>
+    </a>
+
+    <a href="/BLE/beacon-emulator" style="text-decoration:none">
+        <div class="glass-card">
+            <h3 class="card-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v20M17 7l-10 10M17 17L7 7" />
+                </svg>
+                Beacon Emulator
+            </h3>
+            <p style="color:var(--text-muted)">Emulate iBeacon devices with customizable UUID, Major, and Minor values.
+            </p>
+        </div>
+    </a>
+
+    <a href="/WiFi/wifi-scanner" style="text-decoration:none">
+        <div class="glass-card">
+            <h3 class="card-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path
+                        d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" />
+                </svg>
+                Wi-Fi Scanner
+            </h3>
+            <p style="color:var(--text-muted)">Perform security scans and detect Evil Twin attacks on nearby networks.
+            </p>
+        </div>
+    </a>
+
+    <a href="/WiFi/wifi-cracker" style="text-decoration:none">
+        <div class="glass-card">
+            <h3 class="card-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                Password Cracker
+            </h3>
+            <p style="color:var(--text-muted)">Capture WPA handshakes and crack Wi-Fi passwords using dictionary
+                attacks.</p>
+        </div>
+    </a>
+
+    <a href="/WiFi/ap-emulator" style="text-decoration:none">
+        <div class="glass-card">
+            <h3 class="card-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                    <polyline points="2 17 12 22 22 17" />
+                    <polyline points="2 12 12 17 22 12" />
+                </svg>
+                AP Emulator
+            </h3>
+            <p style="color:var(--text-muted)">Launch a rogue Access Point, capture packets, and set up captive portals.
+            </p>
+        </div>
+    </a>
+
+    <a href="/RFID/identify-rfid" style="text-decoration:none">
+        <div class="glass-card">
+            <h3 class="card-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                RFID Identifier
+            </h3>
+            <p style="color:var(--text-muted)">Read, identify, and perform vulnerability scans on HF RFID cards
+                (Mifare).</p>
+        </div>
+    </a>
+
+    <a href="/IR/signal-learner" style="text-decoration:none">
+        <div class="glass-card">
+            <h3 class="card-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="4" />
+                    <line x1="21.17" y1="8" x2="12" y2="8" />
+                    <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
+                </svg>
+                IR Learner
+            </h3>
+            <p style="color:var(--text-muted)">Capture, decode, and save Infrared signals from various remote
+                controllers.</p>
+        </div>
+    </a>
+</div>
+{% endblock %}

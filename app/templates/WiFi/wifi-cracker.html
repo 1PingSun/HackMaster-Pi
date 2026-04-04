@@ -1,871 +1,720 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
-    <title>Wi-Fi Password Cracker - HackMaster Pi</title>
-    <meta name="theme-color" content="#0f0f17">
-</head>
-<body>
-    <div class="wifi-cracker-container">
-        <div class="header-container">
-            <a href="/" class="back-button">← Back</a>
-            <h1>Wi-Fi Password Cracker</h1>
+{% extends "base.html" %}
+
+{% block title %}WPA Handshake Cracker - HackMaster Pi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">WPA2/3 Handshake Interceptor & Cracker</h2>
+    <p class="page-subtitle">Execute an end-to-end multi-stage attack workflow: Interface binding, aerial
+        reconnaissance, targeted traffic interception, forced deauthentication, and dictionary-based cryptographic
+        cracking.</p>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: 1fr;">
+
+    <!-- Step 1: Interface -->
+    <div class="glass-card workflow-step" id="section1">
+        <div class="step-header">
+            <div class="step-number">01</div>
+            <div>
+                <h3>Network Interface Initialization</h3>
+                <p>Acquire and configure a wireless interface for monitor mode operations.</p>
+            </div>
         </div>
 
-        <!-- Step 1: List Adapters -->
-        <div class="wifi-cracker-section" id="section1">
-            <h1>1. List Network Adapters</h1>
-            <div class="wifi-controls">
-                <button class="wifi-button" onclick="listAdapters()">List Adapters</button>
+        <div class="step-content">
+            <button id="listInterfacesButton" class="btn btn-primary" style="margin-bottom: 1rem;">PROBE
+                INTERFACES</button>
+            <div id="interfaceSelectGroup" style="display: none; display: flex; gap: 1rem; align-items: center;">
+                <select id="interfaceSelect" class="styled-select" style="max-width: 300px;"></select>
+                <button id="bindInterfaceButton" class="btn btn-primary">BIND INTERFACE</button>
             </div>
-            <div id="adapterResponse"></div>
+            <div id="selectedInterfaceStatus" class="workflow-status" style="margin-top: 1rem;"></div>
+        </div>
+    </div>
+
+    <!-- Step 2: Recon -->
+    <div class="glass-card workflow-step disabled" id="section2">
+        <div class="step-header">
+            <div class="step-number">02</div>
+            <div>
+                <h3>Aerial Reconnaissance</h3>
+                <p>Scan 802.11 spectrum to identify target Access Points.</p>
+            </div>
         </div>
 
-        <!-- Step 2: Activate Monitor Mode -->
-        <div class="wifi-cracker-section" id="section2">
-            <h1>2. Activate Monitor Mode</h1>
-            <div class="wifi-controls">
-                <select class="wifi-select" id="interfaceSelect">
-                    <option value="">-- Select an interface --</option>
-                </select>
-                <button class="wifi-button" onclick="activateMonitorMode()">Activate Monitor Mode</button>
+        <div class="step-content">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                <button id="scanButton" class="btn btn-primary">INITIATE SCAN</button>
+                <span id="loadingIndicator" class="spinner"
+                    style="display: none; border-top-color: var(--primary);"></span>
             </div>
-            <div class="wifi-status" id="monitorStatus">Select a network interface to check its status</div>
-        </div>
 
-        <!-- Step 3: Scan Wi-Fi Networks -->
-        <div class="wifi-cracker-section" id="section3">
-            <h1>3. Scan Wi-Fi Networks</h1>
-            <div class="wifi-controls">
-                <button class="wifi-button" id="scanButton" onclick="scanWifiNetworks()">Scan Wi-Fi Networks</button>
-            </div>
-            <div id="scanResponse">
-                <div id="loadingIndicator" class="loading-indicator" style="display: none;">
-                    Scanning for Wi-Fi networks...
+            <div id="scanResults" style="display: none; margin-top: 1rem;">
+                <div
+                    style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden;">
+                    <table
+                        style="width: 100%; text-align: left; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem;">
+                        <thead style="background: rgba(255,255,255,0.05); color: var(--text-muted);">
+                            <tr>
+                                <th style="padding: 1rem;">BSSID</th>
+                                <th style="padding: 1rem;">CH</th>
+                                <th style="padding: 1rem;">ENC</th>
+                                <th style="padding: 1rem;">SSID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="networksTableBody" style="color: #fff;">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
                 </div>
-                <div id="scanResults" style="display: none;">
-                    <h3>Scan Results:</h3>
-                    <div class="wifi-table-container">
-                        <table class="wifi-networks-table" id="networksTable">
-                            <thead>
-                                <tr>
-                                    <th>BSSID</th>
-                                    <th>Channel</th>
-                                    <th>Encryption</th>
-                                    <th>ESSID</th>
-                                </tr>
-                            </thead>
-                            <tbody id="networksTableBody">
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="scroll-hint">← Swipe left/right to see more columns →</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Step 4: Select Target & Set Channel -->
-        <div class="wifi-cracker-section" id="section4">
-            <h1>4. Select Target & Set Channel</h1>
-            <div class="wifi-controls">
-                <select class="wifi-select" id="targetSelect">
-                    <option value="">-- Select a target --</option>
-                </select>
-                <button class="wifi-button" onclick="setChannel()">Set Channel</button>
-            </div>
-            <div class="wifi-status" id="channelStatus">Select a target network to set its channel</div>
-        </div>
-
-        <!-- Step 5: Start Traffic Capture -->
-        <div class="wifi-cracker-section" id="section5">
-            <h1>5. Start Traffic Capture</h1>
-            <div class="wifi-controls">
-                <button class="wifi-button success" id="startCaptureButton" onclick="startCapture()">Start Capturing</button>
-            </div>
-            <div class="wifi-status" id="captureStatus">Ready to start capturing traffic</div>
-        </div>
-
-        <!-- Step 6: Send Deauth Packets -->
-        <div class="wifi-cracker-section" id="section6">
-            <h1>6. Send Deauth Packets</h1>
-            <div class="wifi-controls">
-                <label for="packetCount">Packets:</label>
-                <input type="number" class="wifi-input" id="packetCount" value="10" min="1" max="100">
-                <button class="wifi-button danger" id="sendDeauthButton" onclick="sendDeauthPackets()">Send Deauth Packets</button>
-            </div>
-            <div class="wifi-status" id="deauthStatus">Configure packet count and send deauth packets</div>
-        </div>
-
-        <!-- Step 7: Stop Capture -->
-        <div class="wifi-cracker-section" id="section7">
-            <h1>7. Stop Traffic Capture</h1>
-            <div class="wifi-controls">
-                <button class="wifi-button danger" id="stopCaptureButton" onclick="stopCapture()" disabled>Stop Capturing</button>
-            </div>
-            <div class="wifi-status" id="stopCaptureStatus">Capture will be stopped when ready</div>
-        </div>
-
-        <!-- Step 8: Check Handshakes -->
-        <div class="wifi-cracker-section" id="section8">
-            <h1>8. Check Handshakes</h1>
-            <p>Analyze captured packets for WPA handshakes.</p>
-            <div class="wifi-controls">
-                <button class="wifi-button" id="checkHandshakeButton" onclick="checkHandshakes()">Check Handshakes</button>
-            </div>
-            <div class="wifi-status" id="handshakeStatus">Click to check for captured handshakes</div>
-        </div>
-
-        <!-- Step 9: Password Cracking -->
-        <div class="wifi-cracker-section" id="section9">
-            <h1>9. Password Cracking</h1>
-            <p>Select a wordlist and crack the captured handshake.</p>
-            <div class="wifi-controls">
-                <button class="wifi-button" id="loadWordlistsButton" onclick="loadWordlists()">Load Available Wordlists</button>
-            </div>
-            <div class="wordlist-section" id="wordlistSection" style="display: none;">
-                <label for="wordlistSelect">Select wordlist:</label>
-                <select class="wifi-select" id="wordlistSelect">
-                    <option value="">-- Select a wordlist --</option>
-                </select>
-                <button class="wifi-button success" id="crackPasswordButton" onclick="crackPassword()">Crack Password</button>
-            </div>
-            <div class="wifi-status" id="crackStatus" style="display: none;"></div>
-            <div id="crackResults" style="display: none;">
-                <h4>Cracking Results:</h4>
-                <div id="passwordResult"></div>
             </div>
         </div>
     </div>
 
-    <script>
-        let selectedInterface = '';
-        let scannedNetworks = [];
-        let selectedTarget = null;
-        let targetChannel = null;
-        let targetBSSID = null;
-        let targetESSID = null;
+    <!-- Step 3: Target Selection -->
+    <div class="glass-card workflow-step disabled" id="section3">
+        <div class="step-header">
+            <div class="step-number">03</div>
+            <div>
+                <h3>Target Selection & Channel Tuning</h3>
+                <p>Lock the selected interface to the specific channel of the target AP.</p>
+            </div>
+        </div>
 
-        // 步驟管理函數
-        function markStepCompleted(sectionId) {
-            const section = document.getElementById(sectionId);
-            const title = section.querySelector('h1');
-            section.classList.add('completed');
-            title.classList.add('completed');
-        }
+        <div class="step-content">
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                <select id="targetSelect" class="styled-select" style="max-width: 400px;">
+                    <option value="">-- SELECT TARGET --</option>
+                </select>
+                <button id="setChannelButton" class="btn btn-primary" onclick="setChannel()">LOCK CHANNEL</button>
+            </div>
+            <div id="channelStatus" class="workflow-status" style="margin-top: 1rem;"></div>
+        </div>
+    </div>
 
-        function markStepActive(sectionId) {
-            const section = document.getElementById(sectionId);
-            const title = section.querySelector('h1');
-            section.classList.add('active');
-            title.classList.add('active');
-        }
+    <!-- Step 4: Capture -->
+    <div class="glass-card workflow-step disabled" id="section4">
+        <div class="step-header">
+            <div class="step-number">04</div>
+            <div>
+                <h3>Traffic Interception</h3>
+                <p>Begin capturing raw 802.11 frames to secure the required EAPOL handshake.</p>
+            </div>
+        </div>
 
-        function clearStepActive(sectionId) {
-            const section = document.getElementById(sectionId);
-            const title = section.querySelector('h1');
-            section.classList.remove('active');
-            title.classList.remove('active');
-        }
+        <div class="step-content">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <button id="startCaptureButton" class="btn btn-danger" onclick="startCapture()">DEPLOY
+                    EXTRACTOR</button>
+                <button id="stopCaptureButton" class="btn" style="background: rgba(255,255,255,0.1); color: #fff;"
+                    onclick="stopCapture()" disabled>TERMINATE CAPTURE</button>
+            </div>
+            <div id="captureStatus" class="workflow-status"></div>
+            <div id="stopCaptureStatus" class="workflow-status"></div>
+        </div>
+    </div>
 
-        async function listAdapters() {
-            try {
-                const response = await fetch('/WiFi/interface/details');
-                const data = await response.json();
-                
-                const responseDiv = document.getElementById('adapterResponse');
-                
-                if (data.success) {
-                    responseDiv.innerHTML = `
-                        <div class="terminal-output">
-> Success: ${data.message}
-> Network adapters detected: ${data.adapters ? data.adapters.length : 0}
+    <!-- Step 5: Deauthentication -->
+    <div class="glass-card workflow-step disabled" id="section5">
+        <div class="step-header">
+            <div class="step-number">05</div>
+            <div>
+                <h3>Active Deauthentication (Optional)</h3>
+                <p>Forcefully disconnect associated clients to provoke rapid reconnection and handshake transmission.
+                </p>
+            </div>
+        </div>
 
-${data.output}
-                        </div>
-                    `;
-                    
-                    // 載入網卡選項
-                    loadInterfaceList();
-                    markStepCompleted('section1');
-                } else {
-                    responseDiv.innerHTML = `
-                        <div class="wifi-status error">
-                            <strong>Error:</strong> ${data.message}
-                            ${data.output ? '<pre>' + data.output + '</pre>' : ''}
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                document.getElementById('adapterResponse').innerHTML = `
-                    <div class="wifi-status error">
-                        <strong>Network Error:</strong> ${error.message}
+        <div class="step-content">
+            <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                <div
+                    style="display: flex; align-items: center; background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 1rem;">
+                    <span
+                        style="color: var(--text-muted); font-size: 0.85rem; font-family: var(--font-mono); margin-right: 10px;">PACKETS</span>
+                    <input type="number" id="packetCount" value="10" min="1" max="100"
+                        style="background: transparent; border: none; color: #fff; width: 50px; font-family: var(--font-mono); font-size: 1rem; outline: none;">
+                </div>
+                <button id="sendDeauthButton" class="btn btn-warning"
+                    style="background: rgba(255, 165, 2, 0.1); color: var(--warning); border: 1px solid var(--warning);"
+                    onclick="sendDeauthPackets()">TRANSMIT DEAUTH FRAMES</button>
+            </div>
+            <div id="deauthStatus" class="workflow-status"></div>
+        </div>
+    </div>
+
+    <!-- Step 6: Handshake Verification -->
+    <div class="glass-card workflow-step disabled" id="section6">
+        <div class="step-header">
+            <div class="step-number">06</div>
+            <div>
+                <h3>Cryptographic Verification</h3>
+                <p>Analyze the captured .PCAP data structure for complete 4-way WPA/WPA2 exchange sequences.</p>
+            </div>
+        </div>
+
+        <div class="step-content">
+            <button id="checkHandshakeButton" class="btn btn-primary" style="margin-bottom: 1rem;"
+                onclick="checkHandshakes()">VERIFY HANDSHAKE INTEGRITY</button>
+            <div id="handshakeStatus" class="workflow-status"></div>
+        </div>
+    </div>
+
+    <!-- Step 7: Password Cracking -->
+    <div class="glass-card workflow-step disabled" id="section7">
+        <div class="step-header">
+            <div class="step-number">07</div>
+            <div>
+                <h3>Offline Cracking Initialization</h3>
+                <p>Select an appropriate payload list (dictionary) and attempt offline PBKDF2 cryptographic cracking.
+                </p>
+            </div>
+        </div>
+
+        <div class="step-content">
+            <button id="loadWordlistsButton" class="btn btn-primary" style="margin-bottom: 1.5rem;"
+                onclick="loadWordlists()">CONNECT PAYLOAD VAULT</button>
+
+            <div id="wordlistSection" style="display: none;">
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center;">
+                    <select id="wordlistSelect" class="styled-select" style="max-width: 400px;"></select>
+                    <button id="crackPasswordButton" class="btn btn-danger" onclick="crackPassword()">INITIATE
+                        BRUTEFORCE</button>
+                </div>
+
+                <div id="crackStatus" class="workflow-status"></div>
+
+                <div id="crackResults"
+                    style="display: none; background: rgba(0,0,0,0.5); border: 1px solid var(--success); border-left: 4px solid var(--success); padding: 1.5rem; border-radius: 8px; margin-top: 1.5rem;">
+                    <h4
+                        style="color: var(--success); font-family: var(--font-mono); margin-bottom: 0.5rem; text-transform: uppercase;">
+                        KEY RECOVERED SUCESSFULLY</h4>
+                    <div id="passwordResult"
+                        style="font-size: 2rem; font-weight: 800; font-family: var(--font-mono); color: #fff; letter-spacing: 2px;">
                     </div>
-                `;
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    .workflow-step {
+        opacity: 1;
+        transition: opacity 0.3s ease, border-color 0.3s ease;
+    }
+
+    .workflow-step.disabled {
+        opacity: 0.3;
+        pointer-events: none;
+        filter: grayscale(1);
+    }
+
+    .step-header {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+        cursor: pointer;
+    }
+
+    .step-number {
+        font-family: var(--font-mono);
+        color: var(--bg-color);
+        background: var(--primary);
+        font-weight: 800;
+        font-size: 1.25rem;
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        box-shadow: 0 0 15px rgba(102, 252, 241, 0.4);
+    }
+
+    .workflow-step.disabled .step-number {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.4);
+        box-shadow: none;
+    }
+
+    .step-header h3 {
+        color: #fff;
+        margin-bottom: 0.25rem;
+        font-size: 1.2rem;
+    }
+
+    .step-header p {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+
+    .workflow-status {
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        min-height: 20px;
+        margin-top: 0.5rem;
+        word-break: break-all;
+    }
+
+    .wifi-status.info {
+        color: var(--primary);
+    }
+
+    .wifi-status.success {
+        color: var(--success);
+    }
+
+    .wifi-status.error {
+        color: var(--danger);
+    }
+
+    #networksTableBody tr {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    #networksTableBody td {
+        padding: 0.75rem 1rem;
+    }
+</style>
+<script>
+    // Global State Variables
+    let selectedInterface = null;
+    let scannedNetworks = [];
+    let selectedTarget = null;
+    let targetBSSID = null;
+    let targetESSID = null;
+    let targetChannel = null;
+
+    // UI Helpers
+    function markStepCompleted(nextSectionId) {
+        if (nextSectionId) {
+            const sec = document.getElementById(nextSectionId);
+            if (sec) {
+                sec.classList.remove('disabled');
+                // auto scroll to it slightly
+                sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
+    }
 
-        async function loadInterfaceList() {
+    document.addEventListener('DOMContentLoaded', function () {
+        // STEP 1: Network Interface Initialization
+        const listInterfacesBtn = document.getElementById('listInterfacesButton');
+        const interfaceSelectGroup = document.getElementById('interfaceSelectGroup');
+        const interfaceSelect = document.getElementById('interfaceSelect');
+        const bindInterfaceBtn = document.getElementById('bindInterfaceButton');
+        const interfaceStatus = document.getElementById('selectedInterfaceStatus');
+
+        listInterfacesBtn.addEventListener('click', async function () {
+            listInterfacesBtn.disabled = true;
+            interfaceStatus.className = 'workflow-status wifi-status info';
+            interfaceStatus.textContent = '> POLLING HARDWARE CONTROLLERS...';
+
             try {
-                const response = await fetch('/WiFi/interface/list');
-                const data = await response.json();
-                
-                const select = document.getElementById('interfaceSelect');
-                
-                if (data.success) {
-                    // 清空現有選項
-                    select.innerHTML = '<option value="">-- Select an interface --</option>';
-                    
-                    // 添加網卡選項
-                    data.adapters.forEach(adapter => {
+                const response = await fetch('/WiFi/interface/details');
+                const result = await response.json();
+
+                if (result.success && result.adapters.length > 0) {
+                    interfaceStatus.className = 'workflow-status wifi-status success';
+                    interfaceStatus.textContent = `> FOUND ${result.adapters.length} COMPATIBLE INTERFACES`;
+
+                    interfaceSelect.innerHTML = '';
+                    result.adapters.forEach(adapter => {
                         const option = document.createElement('option');
                         option.value = adapter;
                         option.textContent = adapter;
-                        select.appendChild(option);
+                        interfaceSelect.appendChild(option);
                     });
-                    
-                    // 監聽選擇變更
-                    select.onchange = function() {
-                        selectedInterface = this.value;
-                        if (selectedInterface) {
-                            checkInterfaceStatus(selectedInterface);
-                        }
-                    };
+
+                    listInterfacesBtn.style.display = 'none';
+                    interfaceSelectGroup.style.display = 'flex';
+                } else {
+                    interfaceStatus.className = 'workflow-status wifi-status error';
+                    interfaceStatus.textContent = '> HARDWARE ERROR: NO COMPATIBLE INTERFACES FOUND';
+                    listInterfacesBtn.disabled = false;
                 }
             } catch (error) {
-                console.error('Error loading interfaces:', error);
+                interfaceStatus.className = 'workflow-status wifi-status error';
+                interfaceStatus.textContent = `> I/O ERROR: ${error.message}`;
+                listInterfacesBtn.disabled = false;
             }
+        });
+
+        bindInterfaceBtn.addEventListener('click', function () {
+            selectedInterface = interfaceSelect.value;
+            if (selectedInterface) {
+                interfaceStatus.className = 'workflow-status wifi-status success';
+                interfaceStatus.innerHTML = `> INTERFACE <strong>${selectedInterface}</strong> BOUND TO CRACKER ENGINE`;
+                interfaceSelectGroup.style.display = 'none';
+                markStepCompleted('section2');
+            }
+        });
+
+        // STEP 2: Scanning (from previous logic)
+        const scanBtn = document.getElementById('scanButton');
+        scanBtn.addEventListener('click', startScan);
+    });
+
+    async function startScan() {
+        if (!selectedInterface) {
+            alert('Select an interface first.');
+            return;
         }
 
-        async function activateMonitorMode() {
-            if (!selectedInterface) {
-                alert('Please select an interface first');
-                return;
-            }
+        const scanButton = document.getElementById('scanButton');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const scanResults = document.getElementById('scanResults');
 
-            try {
-                const response = await fetch('/WiFi/interface/monitorMode', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        interface: selectedInterface
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert(`Monitor mode activated for ${selectedInterface}`);
-                    checkInterfaceStatus(selectedInterface);
-                    markStepCompleted('section2');
-                } else {
-                    alert(`Failed to activate monitor mode: ${data.message}`);
-                }
-            } catch (error) {
-                alert(`Network error: ${error.message}`);
-            }
-        }
+        scanButton.disabled = true;
+        scanButton.textContent = 'SWEEPING FREQUENCIES...';
+        loadingIndicator.style.display = 'inline-block';
+        scanResults.style.display = 'none';
 
-        async function checkInterfaceStatus(interfaceName) {
-            try {
-                const response = await fetch(`/WiFi/interface/status?interface=${interfaceName}`);
-                const data = await response.json();
-                
-                const statusElement = document.getElementById('monitorStatus');
-                
-                if (data.success) {
-                    statusElement.className = 'wifi-status success';
-                    statusElement.textContent = `Interface ${interfaceName}: ${data.status}`;
-                } else {
-                    statusElement.className = 'wifi-status error';
-                    statusElement.textContent = `Interface ${interfaceName}: Error - ${data.message}`;
-                }
-            } catch (error) {
-                const statusElement = document.getElementById('monitorStatus');
-                statusElement.className = 'wifi-status error';
-                statusElement.textContent = `Interface ${interfaceName}: Error - ${error.message}`;
-            }
-        }
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-        async function scanWifiNetworks() {
-            if (!selectedInterface) {
-                alert('Please select a network interface first');
-                return;
-            }
+            const response = await fetch('/WiFi/interface/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    interface: selectedInterface,
+                    duration: 10
+                }),
+                signal: controller.signal
+            });
 
-            const scanButton = document.getElementById('scanButton');
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const scanResults = document.getElementById('scanResults');
-            
-            // 禁用掃描按鈕並顯示載入指示器
-            scanButton.disabled = true;
-            scanButton.textContent = 'Scanning...';
-            loadingIndicator.style.display = 'block';
-            scanResults.style.display = 'none';
+            clearTimeout(timeoutId);
+            const data = await response.json();
 
-            try {
-                // 設定 fetch 超時控制器
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 45000); // 45秒超時，給更多緩衝時間
-                
-                const response = await fetch('/WiFi/ap/scan', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        interface: selectedInterface,
-                        timeout: 12  // 減少到 12 秒，更實際的掃描時間
-                    }),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                const data = await response.json();
-                
-                if (data.success && data.ap_list) {
-                    displayScanResults(data.ap_list);
-                    markStepCompleted('section3');
-                } else {
-                    throw new Error(data.message || 'Failed to scan networks');
-                }
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    alert('Network scan timed out (45 seconds). Please try again.');
-                } else {
-                    alert(`Network scan failed: ${error.message}`);
-                }
-                scanResults.style.display = 'none';
-            } finally {
-                // 恢復掃描按鈕
-                scanButton.disabled = false;
-                scanButton.textContent = 'Scan Wi-Fi Networks';
-                loadingIndicator.style.display = 'none';
-            }
-        }
-
-        function displayScanResults(networks) {
-            const scanResults = document.getElementById('scanResults');
-            const tableBody = document.getElementById('networksTableBody');
-            
-            // 儲存掃描結果
-            scannedNetworks = networks;
-            
-            // 清空表格內容
-            tableBody.innerHTML = '';
-            
-            if (networks.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="4">No networks found</td></tr>';
+            if (data.success) {
+                displayScanResults(data.networks);
+                markStepCompleted('section3');
             } else {
-                networks.forEach(network => {
-                    const row = document.createElement('tr');
-                    
-                    // BSSID
-                    const bssidCell = document.createElement('td');
-                    bssidCell.textContent = network.BSSID || 'Unknown';
-                    row.appendChild(bssidCell);
-                    
-                    // Channel
-                    const channelCell = document.createElement('td');
-                    channelCell.textContent = network.CH || 'Unknown';
-                    row.appendChild(channelCell);
-                    
-                    // Encryption
-                    const encryptionCell = document.createElement('td');
-                    encryptionCell.textContent = network.ENC || 'Unknown';
-                    row.appendChild(encryptionCell);
-                    
-                    // ESSID
-                    const essidCell = document.createElement('td');
-                    essidCell.textContent = network.ESSID || '<hidden>';
-                    row.appendChild(essidCell);
-                    
-                    tableBody.appendChild(row);
-                });
+                alert(`Scan Failed: ${data.message}`);
             }
-            
-            // 更新目標選擇器
-            updateTargetSelect(networks);
-            
-            scanResults.style.display = 'block';
+        } catch (error) {
+            alert(`System Error: ${error.message}`);
+        } finally {
+            scanButton.disabled = false;
+            scanButton.textContent = 'INITIATE SCAN';
+            loadingIndicator.style.display = 'none';
         }
+    }
 
-        function updateTargetSelect(networks) {
-            const targetSelect = document.getElementById('targetSelect');
-            
-            // 清空現有選項
-            targetSelect.innerHTML = '<option value="">-- Select a target --</option>';
-            
-            // 添加網路選項
-            networks.forEach((network, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                const essid = network.ESSID || '<hidden>';
-                const bssid = network.BSSID || 'Unknown';
-                option.textContent = `${essid} (${bssid})`;
-                targetSelect.appendChild(option);
+    function displayScanResults(networks) {
+        const scanResults = document.getElementById('scanResults');
+        const tableBody = document.getElementById('networksTableBody');
+
+        scannedNetworks = networks;
+        tableBody.innerHTML = '';
+
+        if (networks.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">NO 802.11 NETWORKS DETECTED WITHIN RANGE</td></tr>';
+        } else {
+            networks.forEach(network => {
+                const row = document.createElement('tr');
+
+                const bssidCell = document.createElement('td');
+                bssidCell.textContent = network.BSSID || 'Unknown';
+
+                const channelCell = document.createElement('td');
+                channelCell.textContent = network.CH || 'Unknown';
+
+                const encCell = document.createElement('td');
+                encCell.textContent = network.ENC || 'Unknown';
+
+                const essidCell = document.createElement('td');
+                essidCell.textContent = network.ESSID || '<hidden>';
+
+                row.appendChild(bssidCell);
+                row.appendChild(channelCell);
+                row.appendChild(encCell);
+                row.appendChild(essidCell);
+                tableBody.appendChild(row);
             });
         }
 
-        async function setChannel() {
-            const targetSelect = document.getElementById('targetSelect');
-            const selectedIndex = targetSelect.value;
-            
-            if (!selectedIndex) {
-                alert('Please select a target network first');
-                return;
+        const targetSelect = document.getElementById('targetSelect');
+        targetSelect.innerHTML = '<option value="">-- SELECT TARGET --</option>';
+
+        networks.forEach((network, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            const essid = network.ESSID || '<hidden>';
+            const bssid = network.BSSID || 'Unknown';
+            option.textContent = `${essid} (${bssid})`;
+            targetSelect.appendChild(option);
+        });
+
+        scanResults.style.display = 'block';
+    }
+
+    // The remaining functions verbatim matching original JS layout logic hooks:
+    async function setChannel() {
+        const targetSelect = document.getElementById('targetSelect');
+        const selectedIndex = targetSelect.value;
+        if (!selectedIndex) return alert('Select target AP');
+        if (!selectedInterface) return alert('No interface bound');
+
+        selectedTarget = scannedNetworks[selectedIndex];
+        targetChannel = selectedTarget.CH;
+        targetBSSID = selectedTarget.BSSID;
+        targetESSID = selectedTarget.ESSID || '<hidden>';
+
+        const channelStatus = document.getElementById('channelStatus');
+        channelStatus.className = 'workflow-status wifi-status info';
+        channelStatus.textContent = '> TUNING RADIO CRYSTAL...';
+
+        try {
+            const response = await fetch('/WiFi/interface/channel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ interface: selectedInterface, channel: targetChannel })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                channelStatus.className = 'workflow-status wifi-status success';
+                channelStatus.textContent = `> LOCKED TO CH ${targetChannel} (${targetESSID})`;
+                markStepCompleted('section4');
+                // Enable step 5 & 6 automatically as they are part of the process
+                markStepCompleted('section5');
+                markStepCompleted('section6');
+            } else {
+                channelStatus.className = 'workflow-status wifi-status error';
+                channelStatus.textContent = `> FAIL: ${data.message}`;
             }
+        } catch (error) {
+            channelStatus.className = 'workflow-status wifi-status error';
+            channelStatus.textContent = `> ERROR: ${error.message}`;
+        }
+    }
 
-            if (!selectedInterface) {
-                alert('Please select a network interface first');
-                return;
+    async function startCapture() {
+        if (!selectedInterface || !targetBSSID) return alert('Complete earlier steps first');
+
+        const startBtn = document.getElementById('startCaptureButton');
+        const stopBtn = document.getElementById('stopCaptureButton');
+        const status = document.getElementById('captureStatus');
+
+        startBtn.disabled = true;
+        status.className = 'workflow-status wifi-status info';
+        status.textContent = '> DEPLOYING INTERCEPTOR PROBES...';
+
+        try {
+            const response = await fetch('/WiFi/capture/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ interface: selectedInterface, bssid: targetBSSID, channel: parseInt(targetChannel) })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                stopBtn.disabled = false;
+                status.className = 'workflow-status wifi-status success';
+                status.textContent = `> ACTIVE PCAP STREAM ESTABLISHED FOR ${targetBSSID}`;
+                startBtn.textContent = 'INTERCEPTING...';
+            } else {
+                startBtn.disabled = false;
+                status.className = 'workflow-status wifi-status error';
+                status.textContent = `> FAIL: ${data.message}`;
             }
+        } catch (error) {
+            startBtn.disabled = false;
+            status.className = 'workflow-status wifi-status error';
+            status.textContent = `> ERROR: ${error.message}`;
+        }
+    }
 
-            // 獲取選中的目標
-            selectedTarget = scannedNetworks[selectedIndex];
-            targetChannel = selectedTarget.CH;
-            targetBSSID = selectedTarget.BSSID;
-            targetESSID = selectedTarget.ESSID || '<hidden>';
+    async function stopCapture() {
+        const startBtn = document.getElementById('startCaptureButton');
+        const stopBtn = document.getElementById('stopCaptureButton');
+        const status = document.getElementById('stopCaptureStatus');
 
-            const channelStatus = document.getElementById('channelStatus');
-            channelStatus.textContent = 'Setting channel...';
+        stopBtn.disabled = true;
+        status.className = 'workflow-status wifi-status info';
+        status.textContent = '> TERMINATING CAPTURE STREAM...';
 
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
-                
-                const response = await fetch('/WiFi/interface/channel', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        interface: selectedInterface,
-                        channel: targetChannel
-                    }),
-                    signal: controller.signal
+        try {
+            const response = await fetch('/WiFi/capture/stop', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                status.className = 'workflow-status wifi-status success';
+                status.textContent = '> CAPTURE DUMPED TO INTERNAL STORAGE';
+                startBtn.disabled = false;
+                startBtn.textContent = 'DEPLOY EXTRACTOR';
+                markStepCompleted('section7');
+            } else {
+                stopBtn.disabled = false;
+                status.className = 'workflow-status wifi-status error';
+                status.textContent = `> FAIL: ${data.message}`;
+            }
+        } catch (error) {
+            stopBtn.disabled = false;
+            status.className = 'workflow-status wifi-status error';
+            status.textContent = `> ERROR: ${error.message}`;
+        }
+    }
+
+    async function sendDeauthPackets() {
+        if (!selectedInterface || !targetBSSID) return alert('Complete earlier steps first');
+
+        const btn = document.getElementById('sendDeauthButton');
+        const status = document.getElementById('deauthStatus');
+        const packets = parseInt(document.getElementById('packetCount').value);
+
+        btn.disabled = true;
+        status.className = 'workflow-status wifi-status info';
+        status.textContent = `> TRANSMITTING ${packets} FORGED DEAUTH FRAMES...`;
+
+        try {
+            const response = await fetch('/WiFi/deauth/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ interface: selectedInterface, bssid: targetBSSID, packets: packets, broadcast: true })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                status.className = 'workflow-status wifi-status success';
+                status.textContent = `> DEAUTH SUCCESS: INJECTED ${data.packets_sent} FRAMES`;
+            } else {
+                status.className = 'workflow-status wifi-status error';
+                status.textContent = `> FAIL: ${data.message}`;
+            }
+        } catch (error) {
+            status.className = 'workflow-status wifi-status error';
+            status.textContent = `> ERROR: ${error.message}`;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function checkHandshakes() {
+        const btn = document.getElementById('checkHandshakeButton');
+        const status = document.getElementById('handshakeStatus');
+
+        btn.disabled = true;
+        status.className = 'workflow-status wifi-status info';
+        status.textContent = '> RUNNING CRYPTOGRAPHIC PASS...';
+
+        try {
+            const response = await fetch('/WiFi/handshake/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ capture_file: 'deauth_handshake-01.cap' })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                status.className = 'workflow-status wifi-status success';
+                status.textContent = `> ${data.message}`;
+            } else {
+                status.className = 'workflow-status wifi-status error';
+                status.textContent = `> FAIL: ${data.message}`;
+            }
+        } catch (error) {
+            status.className = 'workflow-status wifi-status error';
+            status.textContent = `> ERROR: ${error.message}`;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function loadWordlists() {
+        const loadBtn = document.getElementById('loadWordlistsButton');
+        const sec = document.getElementById('wordlistSection');
+        const dictSelect = document.getElementById('wordlistSelect');
+
+        loadBtn.disabled = true;
+        loadBtn.textContent = 'MOUNTING VAULT...';
+
+        try {
+            const response = await fetch('/WiFi/wordlists/list');
+            const data = await response.json();
+
+            if (data.success) {
+                dictSelect.innerHTML = '<option value="">-- SELECT PAYLOAD DICT --</option>';
+                data.wordlists.forEach(w => {
+                    const opt = document.createElement('option');
+                    opt.value = w.path;
+                    opt.textContent = `${w.filename} (${(w.size / 1024).toFixed(2)} KB)`;
+                    dictSelect.appendChild(opt);
                 });
-                
-                clearTimeout(timeoutId);
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    channelStatus.className = 'wifi-status success';
-                    channelStatus.textContent = `Channel ${targetChannel} set for ${targetESSID}`;
-                    markStepCompleted('section4');
-                } else {
-                    channelStatus.className = 'wifi-status error';
-                    channelStatus.textContent = `Failed to set channel - ${data.message}`;
-                }
-            } catch (error) {
-                const channelStatus = document.getElementById('channelStatus');
-                if (error.name === 'AbortError') {
-                    channelStatus.className = 'wifi-status error';
-                    channelStatus.textContent = 'Channel setting timed out';
-                } else {
-                    channelStatus.className = 'wifi-status error';
-                    channelStatus.textContent = `Error - ${error.message}`;
-                }
+
+                sec.style.display = 'block';
+                loadBtn.style.display = 'none';
+            } else {
+                alert(`Fail: ${data.message}`);
+                loadBtn.disabled = false;
+                loadBtn.textContent = 'CONNECT PAYLOAD VAULT';
             }
+        } catch (e) {
+            alert(`Error: ${e.message}`);
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'CONNECT PAYLOAD VAULT';
         }
+    }
 
-        async function startCapture() {
-            if (!selectedInterface) {
-                alert('Please select a network interface first');
-                return;
-            }
+    async function crackPassword() {
+        const dictSelect = document.getElementById('wordlistSelect');
+        const btn = document.getElementById('crackPasswordButton');
+        const status = document.getElementById('crackStatus');
+        const resultBox = document.getElementById('crackResults');
+        const resultText = document.getElementById('passwordResult');
 
-            if (!targetBSSID || !targetChannel) {
-                alert('Please select a target and set channel first');
-                return;
-            }
+        if (!targetBSSID || !dictSelect.value) return alert('Select target and wordlist');
 
-            const startButton = document.getElementById('startCaptureButton');
-            const stopButton = document.getElementById('stopCaptureButton');
-            const captureStatus = document.getElementById('captureStatus');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="vertical-align: middle; margin-right: 5px;"></span> BRUTEFORCING...';
+        status.className = 'workflow-status wifi-status info';
+        status.textContent = '> EXECUTING PBKDF2 ATTACK VECTORS...';
+        resultBox.style.display = 'none';
 
-            // 更新按鈕狀態
-            startButton.disabled = true;
-            startButton.textContent = 'Starting...';
-            captureStatus.className = 'wifi-status info';
-            captureStatus.textContent = 'Starting capture...';
+        try {
+            const response = await fetch('/WiFi/handshake/crack', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    capture_file: 'deauth_handshake-01.cap',
+                    bssid: targetBSSID,
+                    wordlist: dictSelect.value
+                })
+            });
 
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
-                
-                const response = await fetch('/WiFi/capture/start', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        interface: selectedInterface,
-                        bssid: targetBSSID,
-                        channel: parseInt(targetChannel)
-                    }),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    stopButton.disabled = false;
-                    captureStatus.className = 'wifi-status success';
-                    captureStatus.textContent = `Capturing traffic for ${targetESSID} on channel ${targetChannel}`;
-                    startButton.textContent = 'Capture Started';
-                    markStepCompleted('section5');
+            const data = await response.json();
+
+            if (data.success) {
+                if (data.password) {
+                    status.className = 'workflow-status wifi-status success';
+                    status.textContent = '> ATTACK COMPLETED SUCESSFULLY';
+                    resultText.textContent = data.password;
+                    resultBox.style.display = 'block';
                 } else {
-                    startButton.disabled = false;
-                    startButton.textContent = 'Start Capturing';
-                    captureStatus.className = 'wifi-status error';
-                    captureStatus.textContent = `Failed to start capture - ${data.message}`;
+                    status.className = 'workflow-status wifi-status error';
+                    status.textContent = '> ATTACK EXHAUSTED: KEY NOT IN DICTIONARY';
                 }
-            } catch (error) {
-                startButton.disabled = false;
-                startButton.textContent = 'Start Capturing';
-                if (error.name === 'AbortError') {
-                    captureStatus.className = 'wifi-status error';
-                    captureStatus.textContent = 'Capture start timed out';
-                } else {
-                    captureStatus.className = 'wifi-status error';
-                    captureStatus.textContent = `Error - ${error.message}`;
-                }
+            } else {
+                status.className = 'workflow-status wifi-status error';
+                status.textContent = `> ATTACK ABORTED: ${data.message}`;
             }
+        } catch (e) {
+            status.className = 'workflow-status wifi-status error';
+            status.textContent = `> CRITICAL FAULT: ${e.message}`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'INITIATE BRUTEFORCE';
         }
-
-        async function stopCapture() {
-            const startButton = document.getElementById('startCaptureButton');
-            const stopButton = document.getElementById('stopCaptureButton');
-            const stopCaptureStatus = document.getElementById('stopCaptureStatus');
-
-            stopButton.disabled = true;
-            stopButton.textContent = 'Stopping...';
-            stopCaptureStatus.className = 'wifi-status info';
-            stopCaptureStatus.textContent = 'Stopping capture...';
-
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
-                
-                const response = await fetch('/WiFi/capture/stop', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    stopCaptureStatus.className = 'wifi-status success';
-                    stopCaptureStatus.textContent = 'Capture stopped successfully';
-                    stopButton.textContent = 'Capture Stopped';
-                    // 重新啟用 start 按鈕
-                    startButton.disabled = false;
-                    startButton.textContent = 'Start Capturing';
-                    markStepCompleted('section7');
-                } else {
-                    stopCaptureStatus.className = 'wifi-status error';
-                    stopCaptureStatus.textContent = `Failed to stop capture - ${data.message}`;
-                    stopButton.disabled = false;
-                    stopButton.textContent = 'Stop Capturing';
-                }
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    stopCaptureStatus.className = 'wifi-status error';
-                    stopCaptureStatus.textContent = 'Capture stop timed out';
-                } else {
-                    stopCaptureStatus.className = 'wifi-status error';
-                    stopCaptureStatus.textContent = `Error - ${error.message}`;
-                }
-                stopButton.disabled = false;
-                stopButton.textContent = 'Stop Capturing';
-            }
-        }
-
-        async function sendDeauthPackets() {
-            if (!selectedInterface) {
-                alert('Please select a network interface first');
-                return;
-            }
-
-            if (!targetBSSID) {
-                alert('Please select a target network first');
-                return;
-            }
-
-            const deauthButton = document.getElementById('sendDeauthButton');
-            const deauthStatus = document.getElementById('deauthStatus');
-            const packetCount = document.getElementById('packetCount').value;
-
-            // 驗證封包數量
-            const packets = parseInt(packetCount);
-            if (isNaN(packets) || packets < 1 || packets > 100) {
-                alert('Please enter a valid packet count (1-100)');
-                return;
-            }
-
-            // 更新按鈕狀態
-            deauthButton.disabled = true;
-            deauthButton.textContent = 'Sending...';
-            deauthStatus.className = 'wifi-status info';
-            deauthStatus.textContent = `Sending ${packets} deauth packets to ${targetESSID}...`;
-
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 45000); // 45秒超時
-                
-                const response = await fetch('/WiFi/deauth/send', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        interface: selectedInterface,
-                        bssid: targetBSSID,
-                        packets: packets,
-                        broadcast: true
-                    }),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    deauthStatus.className = 'wifi-status success';
-                    deauthStatus.textContent = `Successfully sent ${data.packets_sent} deauth packets to ${targetESSID}`;
-                    markStepCompleted('section6');
-                } else {
-                    deauthStatus.className = 'wifi-status error';
-                    deauthStatus.textContent = `Failed to send deauth packets - ${data.message}`;
-                }
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    deauthStatus.className = 'wifi-status error';
-                    deauthStatus.textContent = 'Deauth sending timed out';
-                } else {
-                    deauthStatus.className = 'wifi-status error';
-                    deauthStatus.textContent = `Error - ${error.message}`;
-                }
-            } finally {
-                // 恢復按鈕狀態
-                deauthButton.disabled = false;
-                deauthButton.textContent = 'Send Deauth Packets';
-            }
-        }
-
-        async function checkHandshakes() {
-            const checkButton = document.getElementById('checkHandshakeButton');
-            const handshakeStatus = document.getElementById('handshakeStatus');
-
-            // 更新按鈕狀態
-            checkButton.disabled = true;
-            checkButton.textContent = 'Checking...';
-            handshakeStatus.className = 'wifi-status info';
-            handshakeStatus.textContent = 'Analyzing capture file for handshakes...';
-
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 45000); // 45秒超時
-                
-                const response = await fetch('/WiFi/handshake/check', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        capture_file: 'deauth_handshake-01.cap'  // 使用新的檔名前綴
-                    }),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    handshakeStatus.className = 'wifi-status success';
-                    handshakeStatus.textContent = data.message;
-                    markStepCompleted('section8');
-                } else {
-                    handshakeStatus.className = 'wifi-status error';
-                    handshakeStatus.textContent = `Failed to check handshakes - ${data.message}`;
-                }
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    handshakeStatus.className = 'wifi-status error';
-                    handshakeStatus.textContent = 'Handshake checking timed out';
-                } else {
-                    handshakeStatus.className = 'wifi-status error';
-                    handshakeStatus.textContent = `Error - ${error.message}`;
-                }
-            } finally {
-                // 恢復按鈕狀態
-                checkButton.disabled = false;
-                checkButton.textContent = 'Check Handshakes';
-            }
-        }
-
-        async function loadWordlists() {
-            const loadButton = document.getElementById('loadWordlistsButton');
-            const wordlistSection = document.getElementById('wordlistSection');
-            const wordlistSelect = document.getElementById('wordlistSelect');
-
-            // 更新按鈕狀態
-            loadButton.disabled = true;
-            loadButton.textContent = 'Loading...';
-
-            try {
-                const response = await fetch('/WiFi/wordlists/list');
-                const data = await response.json();
-                
-                if (data.success) {
-                    // 清空現有選項
-                    wordlistSelect.innerHTML = '<option value="">-- Select a wordlist --</option>';
-                    
-                    // 按類別分組
-                    const customWordlists = data.wordlists.filter(w => w.category === 'custom');
-                    const standardWordlists = data.wordlists.filter(w => w.category === 'standard');
-                    
-                    // 添加自定義字典
-                    if (customWordlists.length > 0) {
-                        const customGroup = document.createElement('optgroup');
-                        customGroup.label = 'Custom Wordlists';
-                        customWordlists.forEach(wordlist => {
-                            const option = document.createElement('option');
-                            option.value = wordlist.path;
-                            const sizeKB = (wordlist.size / 1024).toFixed(2);
-                            option.textContent = `${wordlist.filename} (${sizeKB} KB)`;
-                            customGroup.appendChild(option);
-                        });
-                        wordlistSelect.appendChild(customGroup);
-                    }
-                    
-                    // 添加標準字典
-                    if (standardWordlists.length > 0) {
-                        const standardGroup = document.createElement('optgroup');
-                        standardGroup.label = 'Standard Wordlists';
-                        standardWordlists.forEach(wordlist => {
-                            const option = document.createElement('option');
-                            option.value = wordlist.path;
-                            const sizeKB = (wordlist.size / 1024).toFixed(2);
-                            option.textContent = `${wordlist.filename} (${sizeKB} KB)`;
-                            standardGroup.appendChild(option);
-                        });
-                        wordlistSelect.appendChild(standardGroup);
-                    }
-                    
-                    wordlistSection.style.display = 'block';
-                    loadButton.textContent = `Found ${data.count} wordlist(s)`;
-                } else {
-                    alert(`Failed to load wordlists: ${data.message}`);
-                    loadButton.textContent = 'Load Available Wordlists';
-                }
-            } catch (error) {
-                alert(`Error loading wordlists: ${error.message}`);
-                loadButton.textContent = 'Load Available Wordlists';
-            } finally {
-                loadButton.disabled = false;
-            }
-        }
-
-        async function crackPassword() {
-            const crackButton = document.getElementById('crackPasswordButton');
-            const wordlistSelect = document.getElementById('wordlistSelect');
-            const crackStatus = document.getElementById('crackStatus');
-            const crackResults = document.getElementById('crackResults');
-            const passwordResult = document.getElementById('passwordResult');
-
-            // 檢查是否選擇了字典
-            if (!wordlistSelect.value) {
-                alert('Please select a wordlist first');
-                return;
-            }
-
-            // 更新按鈕狀態
-            crackButton.disabled = true;
-            crackButton.textContent = 'Cracking...';
-            crackStatus.className = 'wifi-status info';
-            crackStatus.style.display = 'block';
-            crackStatus.textContent = 'Starting password cracking... This may take several minutes.';
-            crackResults.style.display = 'none';
-
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 360000); // 6分鐘超時
-                
-                const response = await fetch('/WiFi/capture/crack', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        wordlist_file: wordlistSelect.value
-                    }),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    crackStatus.className = 'wifi-status success';
-                    crackStatus.textContent = data.message;
-                    
-                    if (data.password_found) {
-                        passwordResult.innerHTML = `
-                            <div class="result-box success">
-                                <h5>🎉 Password Found!</h5>
-                                <p><strong>Password:</strong> <code>${data.password_found}</code></p>
-                                <p><strong>Network:</strong> ${targetESSID || 'Target network'}</p>
-                                <p><strong>Wordlist used:</strong> ${data.wordlist_file}</p>
-                            </div>
-                        `;
-                        markStepCompleted('section9');
-                    } else {
-                        passwordResult.innerHTML = `
-                            <div class="result-box error">
-                                <h5>❌ Password Not Found</h5>
-                                <p>The password was not found in the selected wordlist.</p>
-                                <p><strong>Wordlist used:</strong> ${data.wordlist_file}</p>
-                                <p>Try using a different or larger wordlist.</p>
-                            </div>
-                        `;
-                    }
-                    
-                    crackResults.style.display = 'block';
-                } else {
-                    crackStatus.className = 'wifi-status error';
-                    crackStatus.textContent = `Failed to crack password - ${data.message}`;
-                }
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    crackStatus.className = 'wifi-status error';
-                    crackStatus.textContent = 'Password cracking timed out (6 minutes)';
-                } else {
-                    crackStatus.className = 'wifi-status error';
-                    crackStatus.textContent = `Error - ${error.message}`;
-                }
-            } finally {
-                // 恢復按鈕狀態
-                crackButton.disabled = false;
-                crackButton.textContent = 'Crack Password';
-            }
-        }
-    </script>
-</body>
-</html>
+    }
+</script>
+{% endblock %}
